@@ -14,6 +14,8 @@ This project is for advanced users only as a lot of the code (Specifically the M
 Hookup guide and general block diagram:
 ![](images/hookup.png)
 
+### Touch input controller
+The touch input controller is based on an Arduino Micro and GT911 driven touch display. You can find the code for it under the `touch_sw` folder.
 
 ### Daughter board
 
