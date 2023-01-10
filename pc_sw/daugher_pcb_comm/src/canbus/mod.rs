@@ -21,6 +21,9 @@ pub struct CanStorage {
 
 impl CanStorage {
     pub fn add_frame(&mut self, can: CanBus, id: u16, data: &[u8]) {
+        if can == CanBus::Loopback {
+            return;
+        }
         let mut x = data.to_vec();
         x.resize(8, 0x00);
         let d = u64::from_be_bytes(x.try_into().unwrap());
@@ -28,14 +31,19 @@ impl CanStorage {
             CanBus::C => self.canc.write().unwrap().insert(id, CanFrameData { data: d }),
             CanBus::B => self.canb.write().unwrap().insert(id, CanFrameData { data: d }),
             CanBus::E => self.cane.write().unwrap().insert(id, CanFrameData { data: d }),
+            _ => return
         };
     }
 
     pub fn get_frame(&self, can: CanBus, id: u16) -> Option<CanFrameData> {
+        if can == CanBus::Loopback {
+            return None;
+        }
         let map = match can {
             CanBus::C => self.canc.read().unwrap(),
             CanBus::B => self.canb.read().unwrap(),
             CanBus::E => self.cane.read().unwrap(),
+            _ => return None
         };
         return map.get(&id).cloned()
     }

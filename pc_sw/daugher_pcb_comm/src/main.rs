@@ -1,4 +1,4 @@
-use std::{path::Path, thread, time::{Duration, Instant}};
+use std::{path::Path, thread, time::{Duration, Instant}, io::{stdout, stdin, BufRead}};
 
 use packed_struct::{prelude::{PrimitiveEnum_u8, PackedStruct}};
 
@@ -36,6 +36,39 @@ fn main() {
     };
     
     let agw = agw::AgwEmulator::new(&mut mcu);
+    let mut next_down = false;
+    let mut prev_down = false;
+    let mut stdin = stdin();
+    let mut mrm_frame = PCCanFrame { // MRM A2
+        can_bus_tag: mcu_comm::CanBus::B,
+        can_id: 0x1A8,
+        dlc: 2,
+        data: [0,0,0,0,0,0,0,0],
+    };
+    for line in stdin.lock().lines() {
+        let l = line.unwrap();
+        if l.starts_with('a') {
+            mrm_frame.data[0] = 0x04;
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mrm_frame.data[0] = 0;
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mcu.send_frame(mrm_frame);
+        } else if l.starts_with('d') {
+            mrm_frame.data[0] = 0x08;
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mrm_frame.data[0] = 0;
+            mcu.send_frame(mrm_frame);
+            std::thread::sleep(Duration::from_millis(20));
+            mcu.send_frame(mrm_frame);
+        }
+    }
     loop {
         std::thread::sleep(Duration::from_millis(10));
     }

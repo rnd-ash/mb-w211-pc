@@ -1,9 +1,18 @@
-use std::{sync::{mpsc::{Receiver, Sender, self}, Arc}, cmp::{max, min}, time::{Duration, Instant}};
+use std::{sync::{mpsc::{Receiver, Sender, self}, Arc, RwLock, atomic::{AtomicU32, Ordering}}, cmp::{max, min}, time::{Duration, Instant}};
 
 use crate::mcu_comm::{CanBus, PCCanFrame};
 
 use super::CanFrameData;
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum SendState {
+    None = 0,
+    Sending = 1,
+    Sent = 2,
+    Timeout = 3,
+}
 
 #[derive(Clone, Debug)]
 pub struct IsoTpEndpoint {
@@ -20,7 +29,10 @@ pub struct IsoTpEndpoint {
     // From CAN to endpoint
     can_rx: Sender<Vec<u8>>,
     // From endpoint to CAN
-    can_tx: Arc<Receiver<PCCanFrame>>
+    can_tx: Arc<Receiver<PCCanFrame>>,
+
+    send_state: Arc<AtomicU32>
+
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -43,6 +55,9 @@ impl IsoTpEndpoint {
         let (can_tx_send, can_tx_recv) = mpsc::channel::<PCCanFrame>(); // Endpoint -> CAN
         let (can_rx_send, can_rx_recv) = mpsc::channel::<Vec<u8>>(); // CAN -> Endpoint
 
+        let send_state = Arc::new(AtomicU32::new(SendState::None as u32));
+
+        let send_state_t = send_state.clone();
 
         std::thread::spawn(move|| {
             let mut tx_isotp = IsoTpPayload::default(); // From client
@@ -56,7 +71,6 @@ impl IsoTpEndpoint {
             let mut ecu_bs: u8 = 0;
             let mut ecu_stmin: u8 = 0;
             loop {
-
                 fn gen_pc_frame(id: u16, bus: CanBus, data: &[u8]) -> PCCanFrame {
                     let mut p = PCCanFrame { 
                         can_bus_tag: bus, 
@@ -135,12 +149,14 @@ impl IsoTpEndpoint {
                             let mut data = vec![tx_isotp.capacity as u8];
                             data.extend_from_slice(&tx_isotp.data);
                             can_tx_send.send(gen_pc_frame(tx_id, bus, &data));
+                            send_state_t.store(SendState::Sent as u32, Ordering::Relaxed);
                             tx_isotp.capacity = 0;
                         } else {
                             // Send start frame
                             let mut data = vec![0x10 | ((tx_isotp.capacity >> 8) as u8) & 0x0F, (tx_isotp.capacity & 0xFF) as u8];
                             data.extend_from_slice(&tx_isotp.data[..6]);
                             can_tx_send.send(gen_pc_frame(tx_id, bus, &data));
+                            send_state_t.store(SendState::Sending as u32, Ordering::Relaxed);
                             tx_isotp.pos = 6;
                             tx_isotp.cts = false;
                             last_tx_time = Instant::now();
@@ -168,6 +184,7 @@ impl IsoTpEndpoint {
                     if tx_isotp.pos >= tx_isotp.capacity {
                         // Done sending
                         tx_isotp = Default::default();
+                        send_state_t.store(SendState::Sent as u32, Ordering::Relaxed);
                     }
                     last_tx_time = Instant::now();
                 }
@@ -176,6 +193,7 @@ impl IsoTpEndpoint {
                 if tx_isotp.capacity != 0 && last_tx_time.elapsed().as_millis() > 2500 {
                     tx_isotp.capacity = 0;
                     log::error!("ISOTP Transmit timeout!");
+                    send_state_t.store(SendState::Timeout as u32, Ordering::Relaxed);
                 }
                 if rx_isotp.capacity != 0 && last_rx_time.elapsed().as_millis() > 2500 {
                     rx_isotp.capacity = 0;
@@ -192,7 +210,8 @@ impl IsoTpEndpoint {
             isotp_rx: Arc::new(isotp_rx_recv),
             isotp_tx: isotp_tx_send,
             can_rx: can_rx_send,
-            can_tx: Arc::new(can_tx_recv)
+            can_tx: Arc::new(can_tx_recv),
+            send_state
         }
     }
 
@@ -202,6 +221,45 @@ impl IsoTpEndpoint {
 
     pub fn send_isotp_payload(&self, payload: Vec<u8>) {
         self.isotp_tx.send(payload);
+    }
+
+    pub fn send_isotp_payload_blocking(&self, payload: Vec<u8>) -> bool {
+        let _ = self.get_send_status(); // Just to clear old state
+        self.isotp_tx.send(payload);
+        let now = Instant::now();
+        let mut ret = false;
+        loop {
+            let state = self.get_send_status();
+            if state == SendState::Timeout {
+                log::error!("Blocking report: ISO-TP Send Timeout!");
+                break;
+            } else if state == SendState::Sent {
+                log::info!("Blocking report: ISO-TP Send OK!");
+                ret = true;
+                break;
+            }
+            if now.elapsed().as_secs() > 10 {
+                log::error!("Blocking report timeout!");
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        return ret;
+    }
+
+    pub fn get_send_status(&self) -> SendState {
+        let s = match self.send_state.load(Ordering::Relaxed) {
+            0 => SendState::None,
+            1 => SendState::Sending,
+            2 => SendState::Sent,
+            3 => SendState::Timeout,
+            _ => panic!("Illegal send state!")
+        };
+
+        if s == SendState::Sent || s == SendState::Timeout {
+            self.send_state.store(SendState::None as u32, Ordering::Relaxed);
+        }
+        s
     }
 
     pub fn get_can_to_send(&self) -> Option<PCCanFrame> {

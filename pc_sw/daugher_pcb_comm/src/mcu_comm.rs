@@ -1,4 +1,4 @@
-use std::{io::{self, BufReader, BufRead}, sync::{Arc, RwLock, mpsc::{Receiver, Sender, self}}};
+use std::{io::{self, BufReader, BufRead}, sync::{Arc, RwLock, mpsc::{Receiver, Sender, self}}, time::Instant};
 
 use packed_struct::{prelude::{PrimitiveEnum_u8, PackedStruct}};
 use serial_rs::{SerialPortSettings, FlowControl, SerialPort};
@@ -10,7 +10,8 @@ use crate::canbus::{isotp::IsoTpEndpoint, CanStorage};
 pub enum CanBus {
     C = 67,
     B = 66,
-    E = 69
+    E = 69,
+    Loopback = 0xFF
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, PackedStruct)]
@@ -27,7 +28,7 @@ pub struct PCCanFrame {
 #[derive(Debug, Clone)]
 pub struct MCUComm {
     can_tx: Sender<PCCanFrame>,
-    isotp_endpoints: Arc<RwLock<Vec<IsoTpEndpoint>>>
+    isotp_endpoints: Arc<RwLock<Vec<IsoTpEndpoint>>>,
 }
 
 
@@ -52,11 +53,16 @@ impl MCUComm {
         let endpoints_tx = endpoints.clone();
         let (tx_can, rx_can) = mpsc::channel::<PCCanFrame>();
 
+        let (tx_loopback, rx_loopback) = mpsc::channel::<PCCanFrame>();
+
         let tx_thread = std::thread::spawn(move || {
             loop {
                 for endpoint in endpoints_tx.read().unwrap().iter() {
                     if let Some(f) = endpoint.get_can_to_send() {
                         port.write_all(&f.pack().unwrap()).unwrap();
+                    }
+                    if let Ok(loopback) = rx_loopback.try_recv() {
+                        println!("LOOPBACK!: {}", loopback);
                     }
                 }
                 loop {
@@ -78,12 +84,15 @@ impl MCUComm {
                 if buf_reader.read_line(&mut line).is_ok() && !line.is_empty() {
                     let parts = line.split(" ").collect::<Vec<&str>>();
                     if parts.len() != 2 {
+                        println!("Corrupt line '{}'", line);
                         continue;
                     }
                     if parts[0].len() != 5 {
+                        println!("Corrupt line '{}'", line);
                         continue;
                     }
                     if parts[1].len() % 2 == 0 {
+                        println!("Corrupt line '{}'", line);
                         continue;
                     }
                     // Valid frame, parse it
@@ -91,11 +100,8 @@ impl MCUComm {
                         'B' => CanBus::B,
                         'C' => CanBus::C,
                         'E' => CanBus::E,
-                        'L' => {
-                            print!("Send OK {}", line);
-                            continue
-                        }
-                        _ => continue
+                        'L' => CanBus::Loopback,
+                        _ => {println!("Corrupt line {}", line); continue}
                     };
                     let id = u16::from_str_radix(&parts[0][1..],16).unwrap();
                     let mut data: Vec<u8> = Vec::new();
@@ -126,6 +132,5 @@ impl MCUComm {
 
     pub fn send_frame(&mut self, frame: PCCanFrame) {
         self.can_tx.send(frame);
-        //self.port.write_all(&frame.pack().unwrap()).unwrap();
     }
 }
