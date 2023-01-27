@@ -1,9 +1,16 @@
-use std::{sync::{mpsc::{Receiver, Sender, self}, Arc, RwLock, atomic::{AtomicU32, Ordering}}, cmp::{max, min}, time::{Duration, Instant}};
+use std::{
+    cmp::{max, min},
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        mpsc::{self, Receiver, Sender},
+        Arc, RwLock,
+    },
+    time::{Duration, Instant},
+};
 
 use crate::mcu_comm::{CanBus, PCCanFrame};
 
 use super::CanFrameData;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -31,8 +38,7 @@ pub struct IsoTpEndpoint {
     // From endpoint to CAN
     can_tx: Arc<Receiver<PCCanFrame>>,
 
-    send_state: Arc<AtomicU32>
-
+    send_state: Arc<AtomicU32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -40,15 +46,14 @@ struct IsoTpPayload {
     data: Vec<u8>,
     capacity: usize,
     pos: usize,
-    cts: bool
+    cts: bool,
 }
 
-unsafe impl Send for IsoTpEndpoint{}
-unsafe impl Sync for IsoTpEndpoint{}
+unsafe impl Send for IsoTpEndpoint {}
+unsafe impl Sync for IsoTpEndpoint {}
 
 impl IsoTpEndpoint {
     pub fn new(tx_id: u16, rx_id: u16, bs: u8, stmin: u8, bus: CanBus) -> Self {
-
         let (isotp_tx_send, isotp_tx_recv) = mpsc::channel::<Vec<u8>>(); // Client -> Endpoint -> ECU
         let (isotp_rx_send, isotp_rx_recv) = mpsc::channel::<Vec<u8>>(); // ECU -> Endpoint -> Client
 
@@ -59,7 +64,7 @@ impl IsoTpEndpoint {
 
         let send_state_t = send_state.clone();
 
-        std::thread::spawn(move|| {
+        std::thread::spawn(move || {
             let mut tx_isotp = IsoTpPayload::default(); // From client
             let mut rx_isotp = IsoTpPayload::default(); // From ECU
             let mut last_tx_time = Instant::now();
@@ -72,11 +77,11 @@ impl IsoTpEndpoint {
             let mut ecu_stmin: u8 = 0;
             loop {
                 fn gen_pc_frame(id: u16, bus: CanBus, data: &[u8]) -> PCCanFrame {
-                    let mut p = PCCanFrame { 
-                        can_bus_tag: bus, 
-                        can_id: id, 
-                        dlc: 8, 
-                        data: [0xCC; 8]
+                    let mut p = PCCanFrame {
+                        can_bus_tag: bus,
+                        can_id: id,
+                        dlc: 8,
+                        data: [0xCC; 8],
                     };
                     let max = min(8, data.len());
                     p.data[0..max].copy_from_slice(&data[0..max]);
@@ -90,13 +95,14 @@ impl IsoTpEndpoint {
                         0x00 => {
                             // Simple 1 frame Rx
                             if in_frame[0] <= 0x07 {
-                                isotp_rx_send.send(in_frame[1..1+in_frame[0] as usize].to_vec());
+                                isotp_rx_send.send(in_frame[1..1 + in_frame[0] as usize].to_vec());
                             }
-                        },
+                        }
                         0x10 => {
                             // Start of multi frame
                             if rx_isotp.capacity == 0 {
-                                rx_isotp.capacity = ((in_frame[0] as usize) & 0x0F) << 4 | (in_frame[1] as usize);
+                                rx_isotp.capacity =
+                                    ((in_frame[0] as usize) & 0x0F) << 4 | (in_frame[1] as usize);
                                 rx_isotp.pos = 6;
                                 rx_isotp.data = Vec::with_capacity(rx_isotp.capacity);
                                 rx_isotp.data.extend_from_slice(&in_frame[2..]);
@@ -107,13 +113,13 @@ impl IsoTpEndpoint {
                                 log::warn!("Trying to receive ISOTP when already receiving!?");
                                 can_tx_send.send(gen_pc_frame(tx_id, bus, &[0x32, 0x00, 0x00]));
                             }
-                        },
+                        }
                         0x20 => {
                             if rx_isotp.capacity != 0 {
-                                let max_read = min(7, rx_isotp.capacity-rx_isotp.pos);
-                                rx_isotp.data.extend_from_slice(&in_frame[1..1+max_read]);
+                                let max_read = min(7, rx_isotp.capacity - rx_isotp.pos);
+                                rx_isotp.data.extend_from_slice(&in_frame[1..1 + max_read]);
                                 rx_isotp.pos += max_read;
-                                rx_count+=1;
+                                rx_count += 1;
                                 if rx_isotp.pos >= rx_isotp.capacity {
                                     // Done!
                                     isotp_rx_send.send(rx_isotp.data.clone());
@@ -125,7 +131,7 @@ impl IsoTpEndpoint {
                                 }
                                 last_rx_time = Instant::now();
                             }
-                        },
+                        }
                         0x30 => {
                             tx_isotp.cts = true;
                             last_tx_time = Instant::now();
@@ -133,7 +139,7 @@ impl IsoTpEndpoint {
                             ecu_bs = in_frame[1];
                             ecu_stmin = in_frame[2];
                         }
-                        _ => continue
+                        _ => continue,
                     }
                 }
 
@@ -145,7 +151,8 @@ impl IsoTpEndpoint {
                         tx_isotp.cts = false;
                         tx_isotp.data = in_isotp;
                         // Check to send first frame
-                        if tx_isotp.capacity < 7 { // One frame
+                        if tx_isotp.capacity < 7 {
+                            // One frame
                             let mut data = vec![tx_isotp.capacity as u8];
                             data.extend_from_slice(&tx_isotp.data);
                             can_tx_send.send(gen_pc_frame(tx_id, bus, &data));
@@ -153,7 +160,10 @@ impl IsoTpEndpoint {
                             tx_isotp.capacity = 0;
                         } else {
                             // Send start frame
-                            let mut data = vec![0x10 | ((tx_isotp.capacity >> 8) as u8) & 0x0F, (tx_isotp.capacity & 0xFF) as u8];
+                            let mut data = vec![
+                                0x10 | ((tx_isotp.capacity >> 8) as u8) & 0x0F,
+                                (tx_isotp.capacity & 0xFF) as u8,
+                            ];
                             data.extend_from_slice(&tx_isotp.data[..6]);
                             can_tx_send.send(gen_pc_frame(tx_id, bus, &data));
                             send_state_t.store(SendState::Sending as u32, Ordering::Relaxed);
@@ -166,18 +176,21 @@ impl IsoTpEndpoint {
                     }
                 }
 
-                if tx_isotp.capacity != 0 && tx_isotp.cts && last_tx_time.elapsed().as_millis() >= stmin as u128 {
+                if tx_isotp.capacity != 0
+                    && tx_isotp.cts
+                    && last_tx_time.elapsed().as_millis() >= ecu_stmin as u128
+                {
                     // Check if we need to send
-                    let max_copy = min(7, tx_isotp.capacity-tx_isotp.pos);
+                    let max_copy = min(7, tx_isotp.capacity - tx_isotp.pos);
                     let mut data = vec![pci];
-                    data.extend_from_slice(&tx_isotp.data[tx_isotp.pos..tx_isotp.pos+max_copy]);
+                    data.extend_from_slice(&tx_isotp.data[tx_isotp.pos..tx_isotp.pos + max_copy]);
                     can_tx_send.send(gen_pc_frame(tx_id, bus, &data));
                     tx_isotp.pos += 7;
                     pci += 1;
                     if pci == 0x30 {
                         pci = 0x20;
                     }
-                    tx_count+=1;
+                    tx_count += 1;
                     if tx_count > ecu_bs && ecu_bs != 0 {
                         tx_isotp.cts = false;
                     }
@@ -211,7 +224,7 @@ impl IsoTpEndpoint {
             isotp_tx: isotp_tx_send,
             can_rx: can_rx_send,
             can_tx: Arc::new(can_tx_recv),
-            send_state
+            send_state,
         }
     }
 
@@ -219,12 +232,12 @@ impl IsoTpEndpoint {
         self.isotp_rx.try_recv().ok()
     }
 
-    pub fn send_isotp_payload(&self, payload: Vec<u8>) {
-        self.isotp_tx.send(payload);
+    pub fn poll_iso_tp_payload_blocking(&self) -> Option<Vec<u8>> {
+        self.isotp_rx.recv().ok()
     }
 
     pub fn send_isotp_payload_blocking(&self, payload: Vec<u8>) -> bool {
-        let _ = self.get_send_status(); // Just to clear old state
+        while SendState::None != self.get_send_status() {} // Just to clear old state
         self.isotp_tx.send(payload);
         let now = Instant::now();
         let mut ret = false;
@@ -253,11 +266,12 @@ impl IsoTpEndpoint {
             1 => SendState::Sending,
             2 => SendState::Sent,
             3 => SendState::Timeout,
-            _ => panic!("Illegal send state!")
+            _ => panic!("Illegal send state!"),
         };
 
         if s == SendState::Sent || s == SendState::Timeout {
-            self.send_state.store(SendState::None as u32, Ordering::Relaxed);
+            self.send_state
+                .store(SendState::None as u32, Ordering::Relaxed);
         }
         s
     }
@@ -275,5 +289,4 @@ impl IsoTpEndpoint {
     pub fn get_rx_id(&self) -> u16 {
         self.rx_id
     }
-
 }

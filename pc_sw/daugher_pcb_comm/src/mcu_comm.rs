@@ -1,28 +1,35 @@
-use std::{io::{self, BufReader, BufRead}, sync::{Arc, RwLock, mpsc::{Receiver, Sender, self}}, time::Instant};
+use std::{
+    io::{self, BufRead, BufReader},
+    sync::{
+        atomic::Ordering,
+        mpsc::{self, Sender},
+        Arc, RwLock,
+    },
+    time::Instant,
+};
 
-use packed_struct::{prelude::{PrimitiveEnum_u8, PackedStruct}};
-use serial_rs::{SerialPortSettings, FlowControl, SerialPort};
+use packed_struct::prelude::{PackedStruct, PrimitiveEnum_u8};
+use serial_rs::{FlowControl, SerialPortSettings};
 
 use crate::canbus::{isotp::IsoTpEndpoint, CanStorage};
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
-#[derive(PrimitiveEnum_u8)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, PrimitiveEnum_u8)]
 pub enum CanBus {
     C = 67,
     B = 66,
     E = 69,
-    Loopback = 0xFF
+    Loopback = 0xFF,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, PackedStruct)]
-#[packed_struct(bit_numbering="msb0")]
+#[packed_struct(bit_numbering = "msb0")]
 pub struct PCCanFrame {
-    #[packed_field(bits="0..8",ty="enum")]
+    #[packed_field(bits = "0..8", ty = "enum")]
     pub can_bus_tag: CanBus,
     #[packed_field(endian = "lsb")]
     pub can_id: u16,
     pub dlc: u8,
-    pub data: [u8; 8]
+    pub data: [u8; 8],
 }
 
 #[derive(Debug, Clone)]
@@ -31,16 +38,15 @@ pub struct MCUComm {
     isotp_endpoints: Arc<RwLock<Vec<IsoTpEndpoint>>>,
 }
 
-
 impl MCUComm {
     pub fn new(path: &str, mut can_sto: CanStorage) -> io::Result<Self> {
         let mut port = serial_rs::new_from_path(
             path,
             Some(
                 SerialPortSettings::default()
-                    .baud(115200)
-                    .read_timeout(Some(500))
-                    .write_timeout(Some(500))
+                    .baud(230400)
+                    .read_timeout(Some(2000))
+                    .write_timeout(Some(2000))
                     .set_flow_control(FlowControl::None),
             ),
         )?;
@@ -48,38 +54,39 @@ impl MCUComm {
         port.clear_output_buffer()?;
         let mut port_clone = port.try_clone().unwrap();
 
-        let mut endpoints: Arc<RwLock<Vec<IsoTpEndpoint>>> = Arc::new(RwLock::new(Vec::new()));
+        let endpoints: Arc<RwLock<Vec<IsoTpEndpoint>>> = Arc::new(RwLock::new(Vec::new()));
         let endpoints_t = endpoints.clone();
         let endpoints_tx = endpoints.clone();
         let (tx_can, rx_can) = mpsc::channel::<PCCanFrame>();
 
         let (tx_loopback, rx_loopback) = mpsc::channel::<PCCanFrame>();
 
-        let tx_thread = std::thread::spawn(move || {
-            loop {
-                for endpoint in endpoints_tx.read().unwrap().iter() {
-                    if let Some(f) = endpoint.get_can_to_send() {
-                        port.write_all(&f.pack().unwrap()).unwrap();
-                    }
-                    if let Ok(loopback) = rx_loopback.try_recv() {
-                        println!("LOOPBACK!: {}", loopback);
-                    }
+        let tx_thread = std::thread::spawn(move || loop {
+            for endpoint in endpoints_tx.read().unwrap().iter() {
+                if let Some(f) = endpoint.get_can_to_send() {
+                    port.write_all(&f.pack().unwrap()).unwrap();
                 }
-                loop {
-                    if let Ok(f) = rx_can.try_recv() {
-                        port.write_all(&f.pack().unwrap()).unwrap();
-                    } else {
-                        break;
-                    }
+                if let Ok(loopback) = rx_loopback.try_recv() {
+                    println!("LOOPBACK!: {}", loopback);
                 }
-                std::thread::sleep(std::time::Duration::from_millis(5));
             }
+            loop {
+                if let Ok(f) = rx_can.try_recv() {
+                    port.write_all(&f.pack().unwrap()).unwrap();
+                } else {
+                    break;
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
         });
 
         let reader_thread = std::thread::spawn(move || {
             let mut buf_reader = BufReader::new(&mut port_clone);
             let mut line: String = String::new();
+            let ts = Instant::now();
+            let ts_ref = can_sto.get_counter();
             loop {
+                ts_ref.store(ts.elapsed().as_millis() as usize, Ordering::Relaxed);
                 line.clear();
                 if buf_reader.read_line(&mut line).is_ok() && !line.is_empty() {
                     let parts = line.split(" ").collect::<Vec<&str>>();
@@ -101,28 +108,30 @@ impl MCUComm {
                         'C' => CanBus::C,
                         'E' => CanBus::E,
                         'L' => CanBus::Loopback,
-                        _ => {println!("Corrupt line {}", line); continue}
+                        _ => {
+                            println!("Corrupt line {}", line);
+                            continue;
+                        }
                     };
-                    let id = u16::from_str_radix(&parts[0][1..],16).unwrap();
+                    let id = u16::from_str_radix(&parts[0][1..], 16).unwrap();
                     let mut data: Vec<u8> = Vec::new();
-                    let lim = (parts[1].len() - 1)/2;
+                    let lim = (parts[1].len() - 1) / 2;
                     for i in 0..lim {
-                        let b = u8::from_str_radix(&parts[1][i*2..(i*2)+2], 16).unwrap();
+                        let b = u8::from_str_radix(&parts[1][i * 2..(i * 2) + 2], 16).unwrap();
                         data.push(b);
                     }
-
                     if data.len() == 8 {
                         for endpoint in endpoints_t.read().unwrap().iter() {
                             endpoint.on_can_read(id, &data)
                         }
                     }
-                    can_sto.add_frame(bus, id, &data);
+                    can_sto.add_frame(bus, id, &data, ts.elapsed().as_millis() as usize);
                 }
             }
         });
-        Ok(Self{
+        Ok(Self {
             can_tx: tx_can,
-            isotp_endpoints: endpoints
+            isotp_endpoints: endpoints,
         })
     }
 

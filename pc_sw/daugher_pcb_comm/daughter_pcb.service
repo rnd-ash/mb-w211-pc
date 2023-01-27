@@ -1,0 +1,13 @@
+[Unit]
+Description=Daughter board CAN daemon
+StartLimitIntervalSec=0
+After=bluetooth.target
+
+[Service]
+ExecStart=/mercedes/launch_daughter_board.sh
+Restart=always
+RestartSec=1
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
