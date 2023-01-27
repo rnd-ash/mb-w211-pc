@@ -2,6 +2,7 @@ use crate::agw::{build_agw_packet_checksum_in_place, IcText, PageTxData, TextFmt
 use futures::StreamExt;
 use std::borrow::BorrowMut;
 use std::slice::Chunks;
+use std::sync::atomic::AtomicBool;
 use std::sync::{mpsc, Arc, RwLock};
 use tokio::count;
 use tokio::time::Instant;
@@ -19,7 +20,7 @@ impl AudioPage {
         Self {
             last_rotate_time: Instant::now(),
             rotating_body: Vec::new(),
-            rotating_idx: 0,
+            rotating_idx: 0
         }
     }
 }
@@ -121,7 +122,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
         build_agw_packet_checksum_in_place(buf)
     }
 
-    fn on_page_idle(&mut self, state: &mut AudioPageState, tracker: &mut PageTxData) {
+    fn on_page_idle(&mut self, state: &mut AudioPageState) -> Option<Vec<u8>> {
         if self.rotating_body.len() != 0 && self.last_rotate_time.elapsed().as_millis() > 2000 {
             self.last_rotate_time = Instant::now();
 
@@ -139,17 +140,19 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
             if self.rotating_idx >= self.rotating_body.len() {
                 self.rotating_idx = 0;
             }
-            tracker.send(self.build_pkg_26(&tmp));
+            Some(self.build_pkg_26(&tmp))
+        } else {
+            None
         }
     }
 
     fn on_event(
         &mut self,
         cmd: AudioPageCmd,
-        state: AudioPageState,
-        tracker: &mut PageTxData,
-    ) -> AudioPageState {
+        state: AudioPageState
+    ) -> (AudioPageState, Option<Vec<u8>>) {
         let mut state = state;
+        let mut to_tx = None;
         match cmd {
             AudioPageCmd::SetPage(p) => {
                 if p != state {
@@ -183,7 +186,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                         self.rotating_idx = 0;
                     } else {
                         self.rotating_body.clear();
-                        tracker.send(self.build_pkg_24(&state));
+                        to_tx = Some(self.build_pkg_24(&state));
                     }
                 }
             }
@@ -220,24 +223,28 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                         self.rotating_idx = 0;
                     } else {
                         self.rotating_body.clear();
-                        tracker.send(self.build_pkg_26(&state));
+                        to_tx = Some(self.build_pkg_26(&state));
                     }
                 }
             }
             AudioPageCmd::SetHeader(h) => {
                 if h != state.header_text {
                     state.header_text = h;
-                    tracker.send(self.build_pkg_29(&state))
+                    to_tx = Some(self.build_pkg_29(&state))
                 }
             }
             AudioPageCmd::SetIcons(u, d) => {
                 if u != state.symbol_top && d != state.symbol_bottom {
                     state.symbol_top = u;
                     state.symbol_bottom = d;
-                    tracker.send(self.build_pkg_28(&state))
+                    to_tx = Some(self.build_pkg_28(&state))
                 }
             }
         }
-        state
+        (state, to_tx)
+    }
+
+    fn get_id(&self) -> u8 {
+        0x03
     }
 }

@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use std::{marker::PhantomData, sync::mpsc, time::Duration};
+use std::{marker::PhantomData, sync::{mpsc, atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use tokio::time::Instant;
 
 pub mod audio;
@@ -162,9 +162,10 @@ where
     fn build_pkg_26(&self, state: &T) -> Vec<u8>;
     fn build_pkg_28(&self, state: &T) -> Vec<u8>;
     fn build_pkg_29(&self, state: &T) -> Vec<u8>;
-    fn on_page_idle(&mut self, state: &mut T, tracker: &mut PageTxData);
-    fn on_event(&mut self, cmd: Cmd, state: T, tracker: &mut PageTxData) -> T;
+    fn on_page_idle(&mut self, state: &mut T) -> Option<Vec<u8>>;
+    fn on_event(&mut self, cmd: Cmd, state: T) -> (T, Option<Vec<u8>>);
     fn name(&self) -> &'static str;
+    fn get_id(&self) -> u8;
 }
 
 pub struct AgwPageWrapper {}
@@ -187,6 +188,7 @@ impl AgwPageWrapper {
             let mut tx_tracker = PageTxData::new(&sender);
             tx_tracker.send(pg.build_pkg_20(&page_state)); // Start the state machine
             println!("AGW Wrapper for page {} started", pg.name());
+            let mut allowed_to_send = true;
             loop {
                 if let Ok((pkg_id, ack)) = rx_ack.try_recv() {
                     if ack == KombiAck::Ok {
@@ -206,7 +208,12 @@ impl AgwPageWrapper {
                 if let KombiAck::Pending(i) = tx_tracker.get_send_state() {
                     if i.elapsed().as_millis() > 2000 {
                         log::error!("Kombi response timeout! Page {}", pg.name());
-                        tx_tracker.reset();
+                        if tx_tracker.get_try_counter() < 3 {
+                            tx_tracker.resend();
+                        } else {
+                            log::error!("Too many retries, giving up. Page {}", pg.name());
+                            tx_tracker.reset();
+                        }
                     }
                 }
                 if let Ok(pkg) = rx_payload.try_recv() {
@@ -216,9 +223,9 @@ impl AgwPageWrapper {
                     }
                     // Acknowledge it
                     log::debug!("{:02X?} from kombi. Page {}", pkg, pg.name());
-                    sender.send(vec![0x03, pkg[0], 0x06]).unwrap();
-                    std::thread::sleep(Duration::from_millis(40));
+                    sender.send(vec![pg.get_id(), pkg[0], 0x06]).unwrap();
                     // Gen pkg 24
+                    std::thread::sleep(Duration::from_millis(40));
                     match pkg[0] {
                         0x22 => tx_tracker.send(pg.build_pkg_20(&page_state)),
                         0x21 => {
@@ -226,23 +233,43 @@ impl AgwPageWrapper {
                             tx_tracker.send(pg.build_pkg_24(&page_state))
                         }
                         0x25 => tx_tracker.send(pg.build_pkg_26(&page_state)),
+                        0x27 => {
+                            match pkg[1] {
+                                0x06 => { allowed_to_send = true; }
+                                0x07 => { 
+                                    allowed_to_send = false;
+                                    // Reinit page if we are allowed to send
+                                    tx_tracker.send(pg.build_pkg_24(&page_state))
+                                }
+                                _ => {
+                                    log::warn!("Unknown pkg 27 state for page {}. {:02X?}", pg.name(), &pkg[1..]);
+                                }
+                            }
+                        }
                         _ => {
-                            log::error!("Unknown  pkg {:02X}. Page {}", pkg[0], pg.name());
+                            log::error!("Unknown  pkg {:02X}. Page {}. {:02X?}", pkg[0], pg.name(), &pkg[1..]);
                         }
                     }
                 }
                 if tx_tracker.init_done() && tx_tracker.is_idle() {
                     if let Ok(cmd) = rx_cmd.try_recv() {
-                        page_state = pg.on_event(cmd, page_state, &mut tx_tracker);
+                        let (state, to_tx) = pg.on_event(cmd, page_state);
+                        page_state = state;
+                        if let Some(tx) = to_tx {
+                            if allowed_to_send { tx_tracker.send(tx); }
+                        }
                     }
                 }
                 if tx_tracker.init_done() && tx_tracker.is_idle() {
-                    pg.on_page_idle(&mut page_state, &mut tx_tracker);
+                    if let Some(tx) = pg.on_page_idle(&mut page_state) {
+                        if allowed_to_send { tx_tracker.send(tx); }
+                    }
                 }
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
         });
 
-        (Self {}, tx_payload, tx_ack, tx_cmd)
+        (Self {
+        }, tx_payload, tx_ack, tx_cmd)
     }
 }
