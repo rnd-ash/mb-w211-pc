@@ -90,7 +90,6 @@ impl IsoTpEndpoint {
 
                 // Check incoming frames
                 if let Ok(in_frame) = can_rx_recv.try_recv() {
-                    log::debug!("In CAN Frame {:02X?}", in_frame);
                     match in_frame[0] & 0xF0 {
                         0x00 => {
                             // Simple 1 frame Rx
