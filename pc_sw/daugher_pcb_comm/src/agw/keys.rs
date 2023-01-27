@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicU8, Ordering, AtomicBool},
         Arc,
     },
     time::{Duration, Instant},
@@ -37,8 +37,15 @@ pub enum KombiPage {
     Other,
 }
 
+#[derive(Debug, Clone)]
 pub struct WheelKeyManager {
     page: Arc<AtomicU8>,
+    up: Arc<AtomicBool>,
+    down: Arc<AtomicBool>,
+    plus: Arc<AtomicBool>,
+    minus: Arc<AtomicBool>,
+    answer: Arc<AtomicBool>,
+    decline: Arc<AtomicBool>
 }
 
 impl WheelKeyManager {
@@ -47,70 +54,55 @@ impl WheelKeyManager {
         let page_ref_c = page_ref.clone();
         let mut volume = 20;
 
-        let mut vol_down = false;
-        let mut vol_up = false;
+        let up = Arc::new(AtomicBool::new(false));
+        let down = Arc::new(AtomicBool::new(false));
+        let plus = Arc::new(AtomicBool::new(false));
+        let minus = Arc::new(AtomicBool::new(false));
+        let answer = Arc::new(AtomicBool::new(false));
+        let decline = Arc::new(AtomicBool::new(false));
+
+        let mut up_c = up.clone();
+        let mut down_c = down.clone();
+        let mut plus_c = plus.clone();
+        let mut minus_c = minus.clone();
+        let mut answer_c = answer.clone();
+        let mut decline_c = decline.clone();
 
         std::thread::spawn(move || {
-            for x in 1..=3 {
-                std::process::Command::new("pactl")
-                    .args([
-                        "set-sink-volume",
-                        &format!("{}", x),
-                        &format!("{}%", volume),
-                    ])
-                    .output();
-            }
             let mut last_press_time = Instant::now();
-            let mut last_key: Option<WheelKey> = None;
-            let mut page = KombiPage::Other;
             loop {
-                if let Some(parse) = can_db.get_frame(CanBus::B, 0x01CA, 50) {
+                if let Some(parse) = can_db.get_frame(CanBus::B, 0x01CA, 40) {
                     last_press_time = Instant::now();
-                    println!("FRAME!: {:02X?}", unsafe { parse.array });
                     page_ref_c.store(unsafe { parse.array[0] }, Ordering::Relaxed);
-                    let v_down_now = (unsafe { parse.array[1] } & 0x04) != 0;
-                    let v_up_now = (unsafe { parse.array[1] } & 0x08) != 0;
-                    if !v_down_now && vol_down {
-                        if volume > 0 {
-                            volume -= 5;
-                            for x in 1..=3 {
-                                std::process::Command::new("pactl")
-                                    .args([
-                                        "set-sink-volume",
-                                        &format!("{}", x),
-                                        &format!("{}%", volume),
-                                    ])
-                                    .output();
-                            }
-                            println!("Volume down. Now at {}%", volume);
-                        }
-                    } else if !v_up_now && vol_up {
-                        if volume < 50 {
-                            volume += 5;
-                            for x in 1..=3 {
-                                std::process::Command::new("pactl")
-                                    .args([
-                                        "set-sink-volume",
-                                        &format!("{}", x),
-                                        &format!("{}%", volume),
-                                    ])
-                                    .output();
-                            }
-                            println!("Volume up. Now at {}%", volume);
-                        }
-                    }
-
-                    vol_down = v_down_now;
-                    vol_up = v_up_now;
+                    decline_c.store(unsafe{ parse.array[1] & 0x80 } != 0, Ordering::Relaxed);
+                    answer_c.store(unsafe{ parse.array[1] & 0x40 } != 0, Ordering::Relaxed);
+                    minus_c.store(unsafe{ parse.array[1] & 0x20 } != 0, Ordering::Relaxed);
+                    plus_c.store(unsafe{ parse.array[1] & 0x10 } != 0, Ordering::Relaxed);
+                    down_c.store(unsafe{ parse.array[1] & 0x02 } != 0, Ordering::Relaxed);
+                    up_c.store(unsafe{ parse.array[1] & 0x01 } != 0, Ordering::Relaxed);
                 } else if last_press_time.elapsed().as_millis() > 1000 {
-                    last_key = None;
-                    vol_down = false;
-                    vol_up = false;
+                    last_press_time = Instant::now();
+                    up_c.store(false, Ordering::Relaxed);
+                    down_c.store(false, Ordering::Relaxed);
+                    plus_c.store(false, Ordering::Relaxed);
+                    minus_c.store(false, Ordering::Relaxed);
+                    answer_c.store(false, Ordering::Relaxed);
+                    decline_c.store(false, Ordering::Relaxed);
                 }
                 std::thread::sleep(Duration::from_millis(20));
             }
         });
-        Self { page: page_ref }
+        
+        Self { 
+            page: page_ref,
+            up,
+            down,
+            plus,
+            minus,
+            answer,
+            decline, 
+            
+        }
     }
 
     pub fn current_page(&self) -> KombiPage {
@@ -121,4 +113,29 @@ impl WheelKeyManager {
             _ => KombiPage::Other,
         }
     }
+
+    pub fn up(&self) -> bool {
+        self.up.load(Ordering::Relaxed)
+    }
+
+    pub fn down(&self) -> bool {
+        self.down.load(Ordering::Relaxed)
+    }
+
+    pub fn plus(&self) -> bool {
+        self.plus.load(Ordering::Relaxed)
+    }
+
+    pub fn minus(&self) -> bool {
+        self.minus.load(Ordering::Relaxed)
+    }
+
+    pub fn answer(&self) -> bool {
+        self.answer.load(Ordering::Relaxed)
+    }
+
+    pub fn decline(&self) -> bool {
+        self.decline.load(Ordering::Relaxed)
+    }
+
 }
