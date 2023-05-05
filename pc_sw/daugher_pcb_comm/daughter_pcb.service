@@ -1,5 +1,5 @@
 [Unit]
-Description=Daughter board CAN daemon
+Description=Daughter board AGW and media daemon
 StartLimitIntervalSec=0
 After=bluetooth.target
 

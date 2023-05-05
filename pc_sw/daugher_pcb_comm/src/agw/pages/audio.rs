@@ -193,7 +193,6 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
             AudioPageCmd::SetBody(b) => {
                 if b != state.body_text {
                     state.body_text = b.clone();
-                    self.last_rotate_time = Instant::now();
                     if state.body_text.text.len() > 15 {
                         self.rotating_body = state
                             .body_text
@@ -221,6 +220,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                         res.push(tmp);
                         self.rotating_body = res;
                         self.rotating_idx = 0;
+                        self.on_page_idle(&mut state);
                     } else {
                         self.rotating_body.clear();
                         to_tx = Some(self.build_pkg_26(&state));

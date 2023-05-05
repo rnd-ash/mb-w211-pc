@@ -157,18 +157,28 @@ where
     T: Default + Send + Sync,
     Cmd: Send + Sync + 'static,
 {
+    /// Init package
     fn build_pkg_20(&self, state: &T) -> Vec<u8>;
+    /// Format and mode package
     fn build_pkg_24(&self, state: &T) -> Vec<u8>;
+    /// Body package
     fn build_pkg_26(&self, state: &T) -> Vec<u8>;
+    /// Symbol package
     fn build_pkg_28(&self, state: &T) -> Vec<u8>;
+    /// Header package
     fn build_pkg_29(&self, state: &T) -> Vec<u8>;
+    /// Action that can be called when page is idling (Not sending data to IC)
     fn on_page_idle(&mut self, state: &mut T) -> Option<Vec<u8>>;
+    /// Event manager for the page
     fn on_event(&mut self, cmd: Cmd, state: T) -> (T, Option<Vec<u8>>);
     fn name(&self) -> &'static str;
     fn get_id(&self) -> u8;
 }
 
-pub struct AgwPageWrapper {}
+/// Audio gateway page wrapper
+pub struct AgwPageWrapper {
+    reset_signal: Arc<AtomicBool>
+}
 
 impl AgwPageWrapper {
     pub fn new<T: Default + Send + Sync, Cmd: Send + Sync + 'static>(
@@ -183,29 +193,46 @@ impl AgwPageWrapper {
         let (tx_payload, rx_payload) = mpsc::channel::<Vec<u8>>();
         let (tx_ack, rx_ack) = mpsc::channel::<(u8, KombiAck)>();
         let (tx_cmd, rx_cmd) = mpsc::channel::<Cmd>();
+        let s = sender.clone();
+
+        let should_reset = Arc::new(AtomicBool::new(false));
+        let should_reset_c = should_reset.clone();
+
         std::thread::spawn(move || {
             let mut page_state = T::default();
-            let mut tx_tracker = PageTxData::new(&sender);
+            let mut tx_tracker = PageTxData::new(&s);
             tx_tracker.send(pg.build_pkg_20(&page_state)); // Start the state machine
             println!("AGW Wrapper for page {} started", pg.name());
             let mut allowed_to_send = true;
             loop {
+
+                if (should_reset_c.load(Ordering::Relaxed)) {
+                    should_reset_c.store(false, Ordering::Relaxed);
+                    tx_tracker.reset();
+                    tx_tracker.send(pg.build_pkg_20(&page_state));
+                }
+
+                // IC has read our package, this is its response
                 if let Ok((pkg_id, ack)) = rx_ack.try_recv() {
-                    if ack == KombiAck::Ok {
+                    if ack == KombiAck::Ok { // processed OK
                         log::debug!("Kombi received OK! Page {}, pkg {:02X}", pg.name(), pkg_id);
                         tx_tracker.reset();
                         tx_tracker.notify_ok(pkg_id);
-                    } else {
+                    } else { // Process status unknown, 0x15 is failure.
                         log::debug!("Kombi received Error! Page {}, pkg {:02X}", pg.name(), pkg_id);
+                        // Try to resend
                         if tx_tracker.get_try_counter() < 3 {
                             tx_tracker.resend();
                         } else {
+                            // Too many resends. Give up
                             log::error!("Too many retries, giving up. Page {}, pkg {:02X}", pg.name(), pkg_id);
                             tx_tracker.reset();
                         }
                     }
                 }
+                // We are awaiting IC response
                 if let KombiAck::Pending(i) = tx_tracker.get_send_state() {
+                    // Timeout
                     if i.elapsed().as_millis() > 2000 {
                         log::error!("Kombi response timeout! Page {}", pg.name());
                         if tx_tracker.get_try_counter() < 3 {
@@ -216,6 +243,7 @@ impl AgwPageWrapper {
                         }
                     }
                 }
+                // IC wants to send our page a message
                 if let Ok(pkg) = rx_payload.try_recv() {
                     if !tx_tracker.is_idle() {
                         log::warn!("IC Failed to send ACK packet but got the next package?. Page {}", pg.name());
@@ -223,24 +251,31 @@ impl AgwPageWrapper {
                     }
                     // Acknowledge it
                     log::debug!("{:02X?} from kombi. Page {}", pkg, pg.name());
-                    sender.send(vec![pg.get_id(), pkg[0], 0x06]).unwrap();
-                    // Gen pkg 24
+                    s.send(vec![pg.get_id(), pkg[0], 0x06]).unwrap();
+                    // Wait 40ms to avoid sending the next payload before IC can process it
                     std::thread::sleep(Duration::from_millis(40));
+                    // For now, we just check the package ID, and all the details
+                    // are hard coded.
                     match pkg[0] {
+                        // IC wants to reset the page (Something bad happened)
                         0x22 => tx_tracker.send(pg.build_pkg_20(&page_state)),
-                        0x21 => {
-                            // RELOAD
-                            tx_tracker.send(pg.build_pkg_24(&page_state))
-                        }
+                        // IC wants us to send PKG 24
+                        0x21 => tx_tracker.send(pg.build_pkg_24(&page_state)),
+                        // IC has told us how it wants the body (26) package
                         0x25 => tx_tracker.send(pg.build_pkg_26(&page_state)),
+                        // IC wants to tell the page a command
                         0x27 => {
+                            // Cmd byte
                             match pkg[1] {
-                                0x06 => { allowed_to_send = true; }
-                                0x07 => { 
-                                    allowed_to_send = false;
+                                // 0x06 - Allow Tx of data
+                                0x06 => { 
+                                    allowed_to_send = true; 
                                     // Reinit page if we are allowed to send
                                     tx_tracker.send(pg.build_pkg_24(&page_state))
                                 }
+                                // 0x07 - Stop sending data. This is useful when NAVI page is
+                                // trying to get exclusive access to IC when doing things like distance countdown
+                                0x07 => allowed_to_send = false,
                                 _ => {
                                     log::warn!("Unknown pkg 27 state for page {}. {:02X?}", pg.name(), &pkg[1..]);
                                 }
@@ -251,25 +286,28 @@ impl AgwPageWrapper {
                         }
                     }
                 }
-                if tx_tracker.init_done() && tx_tracker.is_idle() {
-                    if let Ok(cmd) = rx_cmd.try_recv() {
-                        let (state, to_tx) = pg.on_event(cmd, page_state);
-                        page_state = state;
+                if let Ok(cmd) = rx_cmd.try_recv() {
+                    let (state, to_tx) = pg.on_event(cmd, page_state);
+                    page_state = state;
+                    if tx_tracker.init_done() {
                         if let Some(tx) = to_tx {
                             if allowed_to_send { tx_tracker.send(tx); }
                         }
                     }
-                }
-                if tx_tracker.init_done() && tx_tracker.is_idle() {
-                    if let Some(tx) = pg.on_page_idle(&mut page_state) {
-                        if allowed_to_send { tx_tracker.send(tx); }
+                    if tx_tracker.is_idle() {
+                        if let Some(tx) = pg.on_page_idle(&mut page_state) {
+                            if allowed_to_send { tx_tracker.send(tx); }
+                        }
                     }
                 }
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
         });
 
-        (Self {
-        }, tx_payload, tx_ack, tx_cmd)
+        (Self { reset_signal: should_reset }, tx_payload, tx_ack, tx_cmd)
+    }
+
+    pub fn reset(&self) {
+        self.reset_signal.store(true, Ordering::Relaxed);
     }
 }

@@ -6,7 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::{canbus::CanStorage, mcu_comm::CanBus};
+use crate::{w211can::CanBus};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum WheelKey {
@@ -49,10 +49,10 @@ pub struct WheelKeyManager {
 }
 
 impl WheelKeyManager {
-    pub fn new(can_db: CanStorage) -> Self {
+    pub fn new() -> Self {
         let page_ref = Arc::new(AtomicU8::new(0));
         let page_ref_c = page_ref.clone();
-        let mut volume = 20;
+
 
         let up = Arc::new(AtomicBool::new(false));
         let down = Arc::new(AtomicBool::new(false));
@@ -69,17 +69,20 @@ impl WheelKeyManager {
         let mut decline_c = decline.clone();
 
         std::thread::spawn(move || {
+
+            let can = CanBus::B.create_can_socket(&[0x01CA]).unwrap();
+
             let mut last_press_time = Instant::now();
             loop {
-                if let Some(parse) = can_db.get_frame(CanBus::B, 0x01CA, 40) {
+                if let Some(parse) = can.read_frame(0x01CA) {
                     last_press_time = Instant::now();
-                    page_ref_c.store(unsafe { parse.array[0] }, Ordering::Relaxed);
-                    decline_c.store(unsafe{ parse.array[1] & 0x80 } != 0, Ordering::Relaxed);
-                    answer_c.store(unsafe{ parse.array[1] & 0x40 } != 0, Ordering::Relaxed);
-                    minus_c.store(unsafe{ parse.array[1] & 0x20 } != 0, Ordering::Relaxed);
-                    plus_c.store(unsafe{ parse.array[1] & 0x10 } != 0, Ordering::Relaxed);
-                    down_c.store(unsafe{ parse.array[1] & 0x02 } != 0, Ordering::Relaxed);
-                    up_c.store(unsafe{ parse.array[1] & 0x01 } != 0, Ordering::Relaxed);
+                    page_ref_c.store(parse[0], Ordering::Relaxed);
+                    decline_c.store(parse[1] & 0x80 != 0, Ordering::Relaxed);
+                    answer_c.store(parse[1] & 0x40 != 0, Ordering::Relaxed);
+                    minus_c.store(parse[1] & 0x20 != 0, Ordering::Relaxed);
+                    plus_c.store(parse[1] & 0x10 != 0, Ordering::Relaxed);
+                    down_c.store(parse[1] & 0x02 != 0, Ordering::Relaxed);
+                    up_c.store(parse[1] & 0x01 != 0, Ordering::Relaxed);
                 } else if last_press_time.elapsed().as_millis() > 1000 {
                     last_press_time = Instant::now();
                     up_c.store(false, Ordering::Relaxed);
@@ -89,7 +92,7 @@ impl WheelKeyManager {
                     answer_c.store(false, Ordering::Relaxed);
                     decline_c.store(false, Ordering::Relaxed);
                 }
-                std::thread::sleep(Duration::from_millis(20));
+                std::thread::sleep(Duration::from_millis(40));
             }
         });
         

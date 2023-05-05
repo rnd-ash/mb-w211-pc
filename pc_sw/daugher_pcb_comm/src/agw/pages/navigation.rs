@@ -25,7 +25,7 @@ impl Default for NaviPageState {
     fn default() -> Self {
         Self { 
             current_road: "".into(), 
-            next_road: "W211-E55".into(), 
+            next_road: "RAND_ASH".into(), 
             //
             meta: vec![0x17, 0x00, 0x00, 0xCC, 0xCC, 0x01, 0x00, 0x03]
         }
@@ -77,17 +77,17 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
     }
 
     fn on_page_idle(&mut self, state: &mut NaviPageState) -> Option<Vec<u8>> {
-        if self.last_rotate.elapsed().as_millis() > 2000 {
-            self.last_rotate = Instant::now();
-            let b = state.meta[6].wrapping_add(0x10);
-            state.meta[6] = b;
-            state.meta[3] = b;
-            state.meta[4] = 0xFF-b;
-            state.next_road = format!("B[6] = 0x{:02X?}", b);
-            Some(self.build_pkg_26(state))
-        } else {
+        //if self.last_rotate.elapsed().as_millis() > 2000 {
+        //    self.last_rotate = Instant::now();
+        //    let b = state.meta[6].wrapping_add(0x10);
+        //    state.meta[6] = b;
+        //    state.meta[3] = b;
+        //    state.meta[4] = 0xFF-b;
+        //    state.next_road = format!("B[6] = 0x{:02X?}", b);
+        //    Some(self.build_pkg_26(state))
+        //} else {
             None
-        }
+        //}
     }
 
     fn on_event(&mut self, cmd: NaviPageCmd, state: NaviPageState) -> (NaviPageState, Option<Vec<u8>>) {
