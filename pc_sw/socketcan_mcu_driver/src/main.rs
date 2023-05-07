@@ -130,11 +130,11 @@ fn main() {
                 port.write(&f.pack().unwrap()).unwrap();
             }
             if let Ok(f) = CAN_C.read_frame() {
-                let f = from_can_to_pc_frame(&f, CanBus::B);
+                let f = from_can_to_pc_frame(&f, CanBus::C);
                 port.write(&f.pack().unwrap()).unwrap();
             }
             if let Ok(f) = CAN_E.read_frame() {
-                let f = from_can_to_pc_frame(&f, CanBus::B);
+                let f = from_can_to_pc_frame(&f, CanBus::E);
                 port.write(&f.pack().unwrap()).unwrap();
             }
 
@@ -148,7 +148,6 @@ fn main() {
             let mut buf: [u8; 12] = [0; 12];
             match port_clone.read_exact(&mut buf) {
                 Ok(_) => {
-                    println!("READ OK");
                     match PCCanFrame::unpack_from_slice(&buf) {
                         Ok(f) => {
                             let cf = from_pc_to_can_frame(&f);
