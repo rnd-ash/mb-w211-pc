@@ -8,11 +8,12 @@ use crate::{w211can::{CanBus}};
 use bitflags::bitflags;
 use chrono::{Datelike, Timelike};
 
-use self::{bluetooth_manager::{BluetoothManager, BtCommand}, keys::WheelKeyManager, navigation::{NaviHeading, NaviPage, NaviPageCmd}};
+use self::{bluetooth_manager::{BluetoothManager, BtCommand}, keys::WheelKeyManager, navigation::{NaviHeading, NaviPage, NaviPageCmd}, amplifier_controler::AudioControl};
 
 mod bluetooth_manager;
 mod keys;
 mod pages;
+mod amplifier_controler;
 
 use crate::agw::audio::{AudioPage, AudioPageCmd, AudioPageState, AudioSymbol};
 use crate::agw::keys::KombiPage;
@@ -103,7 +104,7 @@ pub struct AgwEmulator {
 impl AgwEmulator {
     pub fn new() -> Self {
         // quickly set volume
-
+        AudioControl::new();
 
         let mut endpoint = CanBus::B.create_iso_tp_socket(0x01A4, 0x01D0, 0, 0x28).unwrap();
         endpoint.set_nonblocking(true);
