@@ -13,6 +13,7 @@ pub struct AudioPage {
     last_rotate_time: Instant,
     rotating_body: Vec<String>,
     rotating_idx: usize,
+    first_rotate_run: bool,
 }
 
 impl AudioPage {
@@ -20,7 +21,8 @@ impl AudioPage {
         Self {
             last_rotate_time: Instant::now(),
             rotating_body: Vec::new(),
-            rotating_idx: 0
+            rotating_idx: 0,
+            first_rotate_run: false,
         }
     }
 }
@@ -123,8 +125,9 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
     }
 
     fn on_page_idle(&mut self, state: &mut AudioPageState) -> Option<Vec<u8>> {
-        if self.rotating_body.len() != 0 && self.last_rotate_time.elapsed().as_millis() > 2000 {
+        if self.rotating_body.len() != 0 && (self.last_rotate_time.elapsed().as_millis() > 2000 || self.first_rotate_run) {
             self.last_rotate_time = Instant::now();
+            self.first_rotate_run = false;
 
             let mut tmp = state.clone();
             tmp.body_text.text = "~G1".into();
@@ -184,8 +187,13 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                         res.push(tmp);
                         self.rotating_body = res;
                         self.rotating_idx = 0;
+                        self.first_rotate_run = true;
+                        if let Some(tx) = self.on_page_idle(&mut state) {
+                            to_tx = Some(tx)
+                        }
                     } else {
                         self.rotating_body.clear();
+                        self.first_rotate_run = false;
                         to_tx = Some(self.build_pkg_24(&state));
                     }
                 }
@@ -220,9 +228,13 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                         res.push(tmp);
                         self.rotating_body = res;
                         self.rotating_idx = 0;
-                        self.on_page_idle(&mut state);
+                        self.first_rotate_run = true;
+                        if let Some(tx) = self.on_page_idle(&mut state) {
+                            to_tx = Some(tx)
+                        }
                     } else {
                         self.rotating_body.clear();
+                        self.first_rotate_run = false;
                         to_tx = Some(self.build_pkg_26(&state));
                     }
                 }

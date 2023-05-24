@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{time::Instant, num::Wrapping};
 
 use super::{AgwPageFsm, build_agw_packet_checksum_in_place};
 
@@ -77,7 +77,12 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
     }
 
     fn on_page_idle(&mut self, state: &mut NaviPageState) -> Option<Vec<u8>> {
-        //if self.last_rotate.elapsed().as_millis() > 2000 {
+        if self.last_rotate.elapsed().as_millis() > 2000 {
+            self.last_rotate = Instant::now();
+            state.meta[3].wrapping_add(0x10);
+            state.meta[4].wrapping_add(0x10);
+            Some(self.build_pkg_26(state))
+        } else {
         //    self.last_rotate = Instant::now();
         //    let b = state.meta[6].wrapping_add(0x10);
         //    state.meta[6] = b;
@@ -87,7 +92,8 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
         //    Some(self.build_pkg_26(state))
         //} else {
             None
-        //}
+        }
+
     }
 
     fn on_event(&mut self, cmd: NaviPageCmd, state: NaviPageState) -> (NaviPageState, Option<Vec<u8>>) {

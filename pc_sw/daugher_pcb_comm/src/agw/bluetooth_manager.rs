@@ -149,8 +149,8 @@ impl BluetoothManager {
                                     ));
                                 } else {
                                     sender.send(AgwCommand::SetAudioSymbols(
-                                        AudioSymbol::NextTrack,
-                                        AudioSymbol::PrevTrack,
+                                        AudioSymbol::Up,
+                                        AudioSymbol::Down,
                                     ));
                                 }
                             }

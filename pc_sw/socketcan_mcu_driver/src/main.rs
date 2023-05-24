@@ -1,4 +1,4 @@
-use std::{path::Path, time::Duration, thread, sync::{Arc, atomic::{AtomicU32, Ordering}}};
+use std::{path::Path, time::Duration, thread, sync::{Arc, atomic::{AtomicU32, Ordering}}, io::{BufReader, Read, BufRead}};
 
 use clap::Parser;
 use packed_struct::{prelude::{PrimitiveEnum_u8, PackedStruct}, PackedStructSlice};
@@ -48,7 +48,8 @@ pub struct PCCanFrame {
     #[packed_field(endian = "lsb")]
     pub can_id: u16,
     pub dlc: u8,
-    pub data: [u8; 8]
+    pub data: [u8; 8],
+    pub crc: u8
 }
 
 fn from_can_to_pc_frame(f: &CanFrame, bus: CanBus) -> PCCanFrame {
@@ -68,6 +69,7 @@ fn from_can_to_pc_frame(f: &CanFrame, bus: CanBus) -> PCCanFrame {
         can_id: id, 
         dlc: f.dlc() as u8, 
         data,
+        crc: 0x00
     }
 }
 
@@ -80,6 +82,27 @@ fn from_pc_to_can_frame(f: &PCCanFrame) -> CanFrame {
     )
 }
 
+fn is_pc_frame_valid(cf: &PCCanFrame) -> bool {
+    let mut v = cf.pack().unwrap();
+    let mut crc: u8 = 0xFF;
+    for i in 0..12u8 {
+        crc = crc.wrapping_sub(i);
+        crc = crc.wrapping_sub(v[i as usize]);
+    }
+    v[12] == crc
+}
+
+fn sign_pc_can_frame(cf: PCCanFrame) -> [u8; 13] {
+    let mut v = cf.pack().unwrap();
+    let mut crc: u8 = 0xFF;
+    for i in 0..12u8 {
+        crc = crc.wrapping_sub(i);
+        crc = crc.wrapping_sub(v[i as usize]);
+    }
+    v[12] = crc;
+    v
+}
+
 
 fn make_can_channel(iface: CanBus) -> (Arc<CanSocket>, Arc<CanSocket>) {
     let can = Arc::new(CanSocket::open(iface.get_iface_name()).unwrap());
@@ -88,11 +111,23 @@ fn make_can_channel(iface: CanBus) -> (Arc<CanSocket>, Arc<CanSocket>) {
     (can.clone(), can)
 }
 
+pub const VID: u16 = 0x03eb;
+pub const PID: u16 = 0x2175;
+
 #[allow(non_snake_case)]
 fn main() {
-    let settings = AppSettings::parse();
+    let mut settings = AppSettings::parse();
     println!("Waiting for port to be available");
-    while !Path::new(&settings.port).exists() {
+    'search: loop {
+        if let Ok(list) = serial_rs::list_ports() {
+            for port in list {
+                if port.get_vid() == VID && port.get_pid() == PID {
+                    settings.port = port.get_port().to_string();
+                    println!("Found {:04X}:{:04X} on {}", VID, PID, port.get_port());
+                    break 'search;
+                }
+            }
+        }
         thread::sleep(Duration::from_millis(500));
     }
     println!("Port ready!");
@@ -105,7 +140,7 @@ fn main() {
         .baud(settings.baud)
         .read_timeout(Some(2000))
         .write_timeout(Some(2000))
-        .set_flow_control(FlowControl::None);
+        .set_flow_control(FlowControl::RtsCts);
     
 
     let mut port = serial_rs::new_from_path(
@@ -120,24 +155,26 @@ fn main() {
     let error_counter = Arc::new(AtomicU32::new(0));
     let error_counter_writer = error_counter.clone();
 
-    const MAX_ERRORS: u32 = 10;
+    const MAX_ERRORS: u32 = 100;
 
     std::thread::spawn(move || {
         println!("Writer thread running");
         while error_counter_writer.load(Ordering::Relaxed) < MAX_ERRORS {
+            let mut data: Vec<u8> = Vec::new();
             if let Ok(f) = CAN_B.read_frame() {
                 let f = from_can_to_pc_frame(&f, CanBus::B);
-                port.write(&f.pack().unwrap()).unwrap();
+                data.extend_from_slice(&sign_pc_can_frame(f));
             }
             if let Ok(f) = CAN_C.read_frame() {
                 let f = from_can_to_pc_frame(&f, CanBus::C);
-                port.write(&f.pack().unwrap()).unwrap();
+                data.extend_from_slice(&sign_pc_can_frame(f));
             }
             if let Ok(f) = CAN_E.read_frame() {
                 let f = from_can_to_pc_frame(&f, CanBus::E);
-                port.write(&f.pack().unwrap()).unwrap();
+                data.extend_from_slice(&sign_pc_can_frame(f));
             }
-
+            port.write(&data);
+            port.flush();
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
         eprintln!("Transmitter thread terminating");
@@ -145,11 +182,11 @@ fn main() {
     let reader_thread = std::thread::spawn(move || {
         println!("Reader thread running");
         while error_counter.load(Ordering::Relaxed) < MAX_ERRORS {
-            let mut buf: [u8; 12] = [0; 12];
-            match port_clone.read_exact(&mut buf) {
-                Ok(_) => {
-                    match PCCanFrame::unpack_from_slice(&buf) {
-                        Ok(f) => {
+            let mut buf: [u8; 13] = [0; 13];
+            if port_clone.read_exact(&mut buf).is_ok() {
+                match PCCanFrame::unpack_from_slice(&buf) {
+                    Ok(f) => {
+                        if is_pc_frame_valid(&f) {
                             let cf = from_pc_to_can_frame(&f);
                             match f.can_bus_tag {
                                 CanBus::C => CAN_C_R.write_frame(&cf).unwrap(),
@@ -157,18 +194,20 @@ fn main() {
                                 CanBus::E => CAN_E_R.write_frame(&cf).unwrap(),
                             }
                             error_counter.store(0, Ordering::Relaxed);
-                        },
-                        Err(e) => {
+                        } else {
+                            eprintln!("Invalid CS. Frame was {:02X?}", f);
                             error_counter.fetch_add(1, Ordering::Relaxed);
-                            port_clone.clear_input_buffer().unwrap();
-                            eprintln!("Serialize error. buf was {:02X?}", buf);
                         }
+                    },
+                    _ => {
+                        error_counter.fetch_add(1, Ordering::Relaxed);
+                        port_clone.clear_input_buffer().unwrap();
+                        eprintln!("Serialize error. buf was {:02X?}", buf);
                     }
                 }
-                Err(e) => {
-                    println!("READ error {e:?}");
-                    error_counter.fetch_add(1, Ordering::Relaxed);
-                }
+            } else {
+                println!("READ error");
+                error_counter.fetch_add(1, Ordering::Relaxed);
             }
         }
         eprintln!("Receiver thread terminating");
