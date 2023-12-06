@@ -201,7 +201,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
             AudioPageCmd::SetBody(b) => {
                 if b != state.body_text {
                     state.body_text = b.clone();
-                    if state.body_text.text.len() > 15 {
+                    if state.body_text.text.len() > 200 {
                         self.rotating_body = state
                             .body_text
                             .text

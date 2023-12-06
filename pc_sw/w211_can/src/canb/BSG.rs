@@ -35,12 +35,14 @@ impl TryFrom<u8> for BSG_A1_HHS_BSG {
 	}
 }
 
-pub struct BSG_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct BSG_A1(pub u64);
 
 impl BSG_A1 {
 
 	/// Gets CAN ID of BSG_A1
-	pub fn get_canid() -> u16 { BSG_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { BSG_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Vehicle power supply emergency mode: Prio1 and Prio2 consumers off, second battery supports
 
     pub fn set_BN_NTLF(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -133,12 +135,14 @@ impl BSG_A1 {
     pub fn get_BSG_AKT(&self) -> bool { (self.0 >> 40 & 0x1) != 0 }
         
 }
-pub struct SD_RS_BSG(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_BSG(pub u64);
 
 impl SD_RS_BSG {
 
 	/// Gets CAN ID of SD_RS_BSG
-	pub fn get_canid() -> u16 { SD_RS_BSG_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_BSG_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_BSG_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

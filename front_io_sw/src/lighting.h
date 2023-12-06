@@ -5,7 +5,7 @@
 
 const uint8_t LIGHT_PWM_OFF = 0;
 const uint8_t LIGHT_PWM_NIGHT = 10;
-const uint8_t LIGHT_PWM_TUNNEL = 100;
+const uint8_t LIGHT_PWM_TUNNEL = 50;
 const uint8_t LIGHT_PWM_DAY = 255;
 
 #endif

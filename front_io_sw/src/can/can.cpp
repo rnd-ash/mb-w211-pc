@@ -150,6 +150,7 @@ void Can::rx_task() {
                     if (twai_receive(&rx, 0) == ESP_OK && rx.data_length_code != 0 && rx.flags == 0) { // Ignore non data frames
                         // Ignition state, import into EZS
                         if (rx.identifier == EZS_A1_CAN_ID) {
+                            this->last_rx_time = now;
                             ezs.import_frames(frame_to_uint64(&rx), rx.identifier, now);
                         } else if (rx.identifier == SAM_H_A3_CAN_ID) {
                             sam.import_frames(frame_to_uint64(&rx), rx.identifier, now);

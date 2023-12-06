@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.2.7", features = ["derive"] }
 serial-rs = {git="https://github.com/rnd-ash/serial-rs"}
-socketcan = "2.0.0"
-packed_struct="0.10.0"
+w211_can = { path="../w211_can" }

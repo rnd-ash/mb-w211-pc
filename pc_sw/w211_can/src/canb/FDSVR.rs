@@ -57,12 +57,14 @@ impl TryFrom<u8> for FDSVR_A1_PFDS_ANF_VR {
 	}
 }
 
-pub struct FDSVR_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FDSVR_A1(pub u64);
 
 impl FDSVR_A1 {
 
 	/// Gets CAN ID of FDSVR_A1
-	pub fn get_canid() -> u16 { FDSVR_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { FDSVR_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Dynamic seat adjustment active
 
     pub fn set_FDS_AKT_VR(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -99,12 +101,14 @@ impl FDSVR_A1 {
     pub fn get_PFDS_ANF_VR(&self) -> std::result::Result<FDSVR_A1_PFDS_ANF_VR, ()> { return FDSVR_A1_PFDS_ANF_VR::try_from((self.0 >> 56 & 0x3) as u8) }
         
 }
-pub struct SD_RS_FDSVR(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_FDSVR(pub u64);
 
 impl SD_RS_FDSVR {
 
 	/// Gets CAN ID of SD_RS_FDSVR
-	pub fn get_canid() -> u16 { SD_RS_FDSVR_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_FDSVR_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_FDSVR_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

@@ -207,10 +207,12 @@ class ECU:
         # Now create our type unions for CAN Frames!
         for x in self.frames:
             struct_name = x.name.strip().removesuffix("h")
-            tmp += "\npub struct {}(u64);".format(struct_name) # Struct name
+            tmp += "\n#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]"
+            tmp += "\npub struct {}(pub u64);".format(struct_name) # Struct name
             tmp += "\n\nimpl {} {{".format(struct_name)
             tmp += "\n\n\t/// Gets CAN ID of {}{}".format(struct_name, global_guard)
-            tmp += "\n\tpub fn get_canid() -> u16 {{ {}{}_CAN_ID }}".format(struct_name, global_guard)
+            tmp += "\n\tpub const fn get_canid() -> u16 {{ {}{}_CAN_ID }}".format(struct_name, global_guard)
+            tmp += "\n\tpub fn new(data: u64) -> Self { Self(data) }"
             
             # Setters and getters!
             for s in x.signals:

@@ -17,12 +17,14 @@ pub const SAM_H_A7_CAN_ID: u16 = 0x016C;
 pub const SD_RS_SAM_H_CAN_ID: u16 = 0x07C3;
 
 
-pub struct SAM_H_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_H_A1(pub u64);
 
 impl SAM_H_A1 {
 
 	/// Gets CAN ID of SAM_H_A1
-	pub fn get_canid() -> u16 { SAM_H_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_H_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Panic alarm is active
 
     pub fn set_PNK_AKT(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -381,12 +383,14 @@ impl SAM_H_A1 {
     pub fn get_RFL_L_EIN(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
         
 }
-pub struct SAM_H_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_H_A2(pub u64);
 
 impl SAM_H_A2 {
 
 	/// Gets CAN ID of SAM_H_A2
-	pub fn get_canid() -> u16 { SAM_H_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_H_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets tank level. Conversion formula (To raw from real): y=(x-0.0)/0.50 (Unit: %)
 
     pub fn set_TANK_FS_B(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -409,12 +413,14 @@ impl SAM_H_A2 {
     pub fn get_TANK_GE_LI(&self) -> u8 { (self.0 >> 40 & 0xff) as u8 }
         
 }
-pub struct SAM_H_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_H_A3(pub u64);
 
 impl SAM_H_A3 {
 
 	/// Gets CAN ID of SAM_H_A3
-	pub fn get_canid() -> u16 { SAM_H_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_H_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on the right turn signal
 
     pub fn set_BLI_RE_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -444,12 +450,14 @@ impl SAM_H_A3 {
     pub fn get_HELL_BLINK(&self) -> u8 { (self.0 >> 48 & 0xff) as u8 }
         
 }
-pub struct SAM_H_A5(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_H_A5(pub u64);
 
 impl SAM_H_A5 {
 
 	/// Gets CAN ID of SAM_H_A5
-	pub fn get_canid() -> u16 { SAM_H_A5_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_H_A5_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on fog lights
 
     pub fn set_NSW_EIN_EDW(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -479,12 +487,14 @@ impl SAM_H_A5 {
     pub fn get_HELL_EDW(&self) -> u8 { (self.0 >> 48 & 0xff) as u8 }
         
 }
-pub struct SAM_H_A7(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_H_A7(pub u64);
 
 impl SAM_H_A7 {
 
 	/// Gets CAN ID of SAM_H_A7
-	pub fn get_canid() -> u16 { SAM_H_A7_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_H_A7_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Close the tailgate button
 
     pub fn set_TST_HFS_SCHL(&mut self, value: bool){ self.0 = (self.0 & 0xfdffffffffffffff) | ((value as u64) & 0x1) << 57; }
@@ -500,12 +510,14 @@ impl SAM_H_A7 {
     pub fn get_TST_HFS_OEFF(&self) -> bool { (self.0 >> 56 & 0x1) != 0 }
         
 }
-pub struct SD_RS_SAM_H(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_SAM_H(pub u64);
 
 impl SD_RS_SAM_H {
 
 	/// Gets CAN ID of SD_RS_SAM_H
-	pub fn get_canid() -> u16 { SD_RS_SAM_H_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_SAM_H_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_SAM_H_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

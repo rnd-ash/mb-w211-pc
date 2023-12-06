@@ -13,12 +13,14 @@ pub const RDK_A1_CAN_ID: u16 = 0x0198;
 pub const SD_RS_RDK_CAN_ID: u16 = 0x07D8;
 
 
-pub struct RDK_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RDK_A1(pub u64);
 
 impl RDK_A1 {
 
 	/// Gets CAN ID of RDK_A1
-	pub fn get_canid() -> u16 { RDK_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { RDK_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Services
 
     pub fn set_SERVICE(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -160,12 +162,14 @@ impl RDK_A1 {
     pub fn get_P_RR(&self) -> u8 { (self.0 >> 8 & 0xff) as u8 }
         
 }
-pub struct SD_RS_RDK(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_RDK(pub u64);
 
 impl SD_RS_RDK {
 
 	/// Gets CAN ID of SD_RS_RDK
-	pub fn get_canid() -> u16 { SD_RS_RDK_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_RDK_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_RDK_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

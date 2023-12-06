@@ -18,12 +18,14 @@ pub const MSSK_A2_CAN_ID: u16 = 0x0208;
 pub const SD_RS_MSS_CAN_ID: u16 = 0x07C6;
 
 
-pub struct MSS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSS_A1(pub u64);
 
 impl MSS_A1 {
 
 	/// Gets CAN ID of MSS_A1
-	pub fn get_canid() -> u16 { MSS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { MSS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on high beam
 
     pub fn set_FL_EIN_MSS(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -158,12 +160,14 @@ impl MSS_A1 {
     pub fn get_SIR_EIN_MSS(&self) -> bool { (self.0 >> 16 & 0x1) != 0 }
         
 }
-pub struct MSS_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSS_A2(pub u64);
 
 impl MSS_A2 {
 
 	/// Gets CAN ID of MSS_A2
-	pub fn get_canid() -> u16 { MSS_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { MSS_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Roof sign indicator light on
 
     pub fn set_DZ_KL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -256,12 +260,14 @@ impl MSS_A2 {
     pub fn get_FSB_HZG_AUS(&self) -> bool { (self.0 >> 40 & 0x1) != 0 }
         
 }
-pub struct MSS_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSS_A3(pub u64);
 
 impl MSS_A3 {
 
 	/// Gets CAN ID of MSS_A3
-	pub fn get_canid() -> u16 { MSS_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { MSS_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets GPS Latitude, South = [-]; North = [+]. Conversion formula (To raw from real): y=(x+648000000.0)/0.30 (Unit: ms)
 
     pub fn set_DEST_LAT(&mut self, value: u32){ self.0 = (self.0 & 0x00000000ffffffff) | ((value as u64) & 0xffffffff) << 32; }
@@ -277,12 +283,14 @@ impl MSS_A3 {
     pub fn get_DEST_LONG(&self) -> u32 { (self.0 >> 0 & 0xffffffff) as u32 }
         
 }
-pub struct MSS_A4(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSS_A4(pub u64);
 
 impl MSS_A4 {
 
 	/// Gets CAN ID of MSS_A4
-	pub fn get_canid() -> u16 { MSS_A4_CAN_ID }
+	pub const fn get_canid() -> u16 { MSS_A4_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Close the rear right window
 
     pub fn set_FHR_ALARM(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -333,12 +341,14 @@ impl MSS_A4 {
     pub fn get_MOD_ALARM(&self) -> bool { (self.0 >> 57 & 0x1) != 0 }
         
 }
-pub struct MSSK_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSSK_A1(pub u64);
 
 impl MSSK_A1 {
 
 	/// Gets CAN ID of MSSK_A1
-	pub fn get_canid() -> u16 { MSSK_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { MSSK_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on the horn
 
     pub fn set_SGH_EIN_K(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -487,12 +497,14 @@ impl MSSK_A1 {
     pub fn get_SHD_AUF_K(&self) -> bool { (self.0 >> 36 & 0x1) != 0 }
         
 }
-pub struct MSSK_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MSSK_A2(pub u64);
 
 impl MSSK_A2 {
 
 	/// Gets CAN ID of MSSK_A2
-	pub fn get_canid() -> u16 { MSSK_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { MSSK_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Passenger seat - toggle bit
 
     pub fn set_SBF_K_TGL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -515,12 +527,14 @@ impl MSSK_A2 {
     pub fn get_SBF_VOR_K(&self) -> bool { (self.0 >> 56 & 0x1) != 0 }
         
 }
-pub struct SD_RS_MSS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_MSS(pub u64);
 
 impl SD_RS_MSS {
 
 	/// Gets CAN ID of SD_RS_MSS
-	pub fn get_canid() -> u16 { SD_RS_MSS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_MSS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_MSS_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

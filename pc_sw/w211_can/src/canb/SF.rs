@@ -14,12 +14,14 @@ pub const SF_A2_CAN_ID: u16 = 0x02D0;
 pub const SD_RS_SF_CAN_ID: u16 = 0x07CC;
 
 
-pub struct SF_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SF_A1(pub u64);
 
 impl SF_A1 {
 
 	/// Gets CAN ID of SF_A1
-	pub fn get_canid() -> u16 { SF_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { SF_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Driver's seat backrest unlocked
 
     pub fn set_LE_F_ENT(&mut self, value: bool){ self.0 = (self.0 & 0xf7ffffffffffffff) | ((value as u64) & 0x1) << 59; }
@@ -63,12 +65,14 @@ impl SF_A1 {
     pub fn get_SF_POS_K(&self) -> u8 { (self.0 >> 16 & 0xff) as u8 }
         
 }
-pub struct SF_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SF_A2(pub u64);
 
 impl SF_A2 {
 
 	/// Gets CAN ID of SF_A2
-	pub fn get_canid() -> u16 { SF_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { SF_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Move to entry/exit position active
 
     pub fn set_ESH_AKT(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -161,12 +165,14 @@ impl SF_A2 {
     pub fn get_MF_P1_EN(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct SD_RS_SF(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_SF(pub u64);
 
 impl SD_RS_SF {
 
 	/// Gets CAN ID of SD_RS_SF
-	pub fn get_canid() -> u16 { SD_RS_SF_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_SF_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Reserved for vector format designation BR211
 
     pub fn set_SF_RES(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

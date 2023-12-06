@@ -1,8 +1,7 @@
-use socketcan::{CanSocket, Socket, CanDataFrame, EmbeddedFrame, StandardId, Id, CanFrame, CanFilter};
-use socketcan_isotp::{IsoTpSocket, IsoTpBehaviour, IsoTpOptions, LinkLayerOptions, FlowControlOptions};
+use std::{sync::{mpsc::{self, Receiver, Sender}, atomic::{AtomicBool, Ordering}, Arc}, io::ErrorKind, net::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr}, collections::{HashMap, VecDeque}, iter::Map, borrow::BorrowMut, time::Duration};
 
-use socketcan_isotp::StandardId as IsoTpStandardId;
-use socketcan_isotp::Id as IsoTpId;
+use socketcan::{CanSocket, Socket, StandardId, CanDataFrame, CanFrame, EmbeddedFrame, Id};
+use socketcan_isotp::{IsoTpSocket, LinkLayerOptions, FlowControlOptions, IsoTpOptions, IsoTpBehaviour};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub enum CanBus {
@@ -10,35 +9,9 @@ pub enum CanBus {
     B = 66,
     E = 69,
 }
-pub struct CanWrapper(CanSocket);
-
-// Done for easier wrapping of Tx/Rx functions
-impl CanWrapper {
-    pub fn send_frame(&self, id: u16, data: &[u8]) {
-        let df = CanDataFrame::new(
-            Id::Standard(unsafe { StandardId::new_unchecked(id) }), 
-            &data
-        ).unwrap();
-        let _ = self.0.write_frame(&CanFrame::Data(df));
-    }
-
-    pub fn with_socket<F: Fn(&mut CanSocket)>(&mut self, f: F) {
-        f(&mut self.0)
-    }
-
-    pub fn read_frame(&self) -> Option<(u16, Vec<u8>)> {
-        let f = self.0.read_frame().ok()?;
-        let id = if let Id::Standard(id) = f.id() {
-            id.as_raw()
-        } else {
-            0x7FF
-        };
-        Some((id, f.data().to_vec()))
-    }
-}
 
 impl CanBus {
-    pub fn get_network_name(&self) -> &'static str {
+    pub fn get_net_name(&self) -> &'static str {
         match self {
             CanBus::C => "vcan_c",
             CanBus::B => "vcan_b",
@@ -46,70 +19,61 @@ impl CanBus {
         }
     }
 
-    pub fn create_iso_tp_socket(&self, tx_id: u16, rx_id: u16, stmin: u8, bs: u8) -> Result<IsoTpSocket, socketcan_isotp::Error> {
-        let opts: IsoTpOptions = IsoTpOptions::new(
-            IsoTpBehaviour::CAN_ISOTP_TX_PADDING | IsoTpBehaviour::CAN_ISOTP_TX_PADDING,
-            std::time::Duration::from_millis(0),
-            0x00,
-            0xCC,
-            0xCC,
-            0x00,
-        )
-        .unwrap();
+    pub fn create_can_socket(&self) -> CanSocket {
+        Self::create_can_socket_with_name(self.get_net_name())
+    }
 
-        let link_opts: LinkLayerOptions = LinkLayerOptions::default();
+    pub fn create_can_socket_with_name(name: &str) -> CanSocket {
+        socketcan::CanSocket::open(name).unwrap()
+    }
 
-        let (tx_id, rx_id) = (
-            IsoTpId::Standard(unsafe { IsoTpStandardId::new_unchecked(tx_id) }),
-            IsoTpId::Standard(unsafe { IsoTpStandardId::new_unchecked(rx_id) }),
-        );
+    pub fn create_isotp_socket(&self, rx: u16, tx: u16, stmin: u8, bs: u8) -> IsoTpSocket {
+        Self::create_isotp_socket_with_name(self.get_net_name(), rx, tx, stmin, bs)
+    }
 
+    pub fn create_isotp_socket_with_name(name: &str, rx: u16, tx: u16, stmin: u8, bs: u8) -> IsoTpSocket {
+        // We are in a known CAN format (W211), so can shortcuts can be made
         let fc_opts = FlowControlOptions::new(bs, stmin, 0);
-
-        let socket = socketcan_isotp::IsoTpSocket::open_with_opts(
-            &self.get_network_name(),
-            rx_id,
-            tx_id,
-            Some(opts),
-            Some(fc_opts),
-            Some(link_opts),
-        )?;
-        socket.set_nonblocking(true)?;
-        Ok(socket)
-    }
-
-    pub fn create_can_socket(&self, filter_ids: &[u16]) -> Result<CanWrapper, socketcan::Error> {
-        let channel = CanSocket::open(&self.get_network_name())?;
-        channel.set_nonblocking(true)?;
-        if filter_ids.is_empty() {
-            channel.set_filter_accept_all()?;
-        } else {
-            let mut cf = Vec::new();
-            for id in filter_ids {
-                cf.push(CanFilter::new(*id as u32, 0xFFFF))
-            }
-            channel.set_filters(&cf)?;
-        }
-        Ok(CanWrapper(channel))
+        let behaviour = IsoTpBehaviour::CAN_ISOTP_RX_PADDING | IsoTpBehaviour::CAN_ISOTP_TX_PADDING;
+        let isotp_opts = IsoTpOptions::new(
+            behaviour, 
+            Duration::from_millis(0), 
+            0, 
+            0xCC, 
+            0xCC, 
+            0
+        ).unwrap();
+        
+        socketcan_isotp::IsoTpSocket::open_with_opts(
+            name, 
+            socketcan_isotp::Id::Standard(unsafe { StandardId::new_unchecked(rx) }), 
+            socketcan_isotp::Id::Standard(unsafe { StandardId::new_unchecked(tx) }), 
+            Some(isotp_opts), 
+            Some(fc_opts), 
+            None
+        ).unwrap()
     }
 }
 
-
-fn frame_to_u64(f: &CanDataFrame) -> (u64, u8) {
+pub fn frame_to_u64(f: &CanFrame) -> (u64, u8) {
     let mut v: u64 = 0;
-    for x in 0..f.dlc() {
-        v |= (f.data()[x] as u64) << 8*(7-x);
+    let data = f.data();
+    for x in 0..data.len() as usize {
+        v |= (data[x] as u64) << 8*(7-x);
     }
-    (v, f.dlc() as u8)
+    (v, data.len() as u8)
 }
 
-fn u64_to_frame(id: u16, v: u64, dlc: u8) -> CanDataFrame {
-    let mut data = vec![0; dlc as usize];
+pub fn u64_to_frame(id: u16, v: u64, dlc: u8) -> CanFrame {
+    let mut data = vec![0; 8];
     for x in 0..dlc as usize {
         data[x] = ((v >> (8*(7-x))) & 0xFF) as u8;
     }
-    CanDataFrame::new(
-        Id::Standard(unsafe { StandardId::new_unchecked(id) }), 
-        &data
-    ).unwrap()
+
+    CanFrame::Data(
+        CanDataFrame::new(
+            Id::Standard(unsafe { StandardId::new_unchecked(id) }), 
+            &data
+        ).unwrap()
+    )
 }

@@ -250,12 +250,14 @@ impl TryFrom<u8> for ARMADA_A1_GS_SHL {
 	}
 }
 
-pub struct ARMADA_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ARMADA_A1(pub u64);
 
 impl ARMADA_A1 {
 
 	/// Gets CAN ID of ARMADA_A1
-	pub fn get_canid() -> u16 { ARMADA_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { ARMADA_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Switch on AKSE lamp
 
     pub fn set_AKSE_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -411,12 +413,14 @@ impl ARMADA_A1 {
     pub fn get_KONT_HI_LI(&self) -> bool { (self.0 >> 16 & 0x1) != 0 }
         
 }
-pub struct ARMADA_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ARMADA_A2(pub u64);
 
 impl ARMADA_A2 {
 
 	/// Gets CAN ID of ARMADA_A2
-	pub fn get_canid() -> u16 { ARMADA_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { ARMADA_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Confirm bit for all crash events, toggles
 
     pub fn set_CONF_CRASH(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -530,12 +534,14 @@ impl ARMADA_A2 {
     pub fn get_CRASH_H(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct SD_RS_ARMADA(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_ARMADA(pub u64);
 
 impl SD_RS_ARMADA {
 
 	/// Gets CAN ID of SD_RS_ARMADA
-	pub fn get_canid() -> u16 { SD_RS_ARMADA_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_ARMADA_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_ARMADA_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

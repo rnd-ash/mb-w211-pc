@@ -81,12 +81,14 @@ impl TryFrom<u8> for KLA_A1_LKU_VORN {
 	}
 }
 
-pub struct KLA_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KLA_A1(pub u64);
 
 impl KLA_A1 {
 
 	/// Gets CAN ID of KLA_A1
-	pub fn get_canid() -> u16 { KLA_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { KLA_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Switch on the heated rear window
 
     pub fn set_HHS_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -242,12 +244,14 @@ impl KLA_A1 {
     pub fn get_T_INNEN_KLA(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
         
 }
-pub struct KLA_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KLA_A2(pub u64);
 
 impl KLA_A2 {
 
 	/// Gets CAN ID of KLA_A2
-	pub fn get_canid() -> u16 { KLA_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { KLA_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Open/close rear right window
 
     pub fn set_FHR_KLA(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -298,12 +302,14 @@ impl KLA_A2 {
     pub fn get_KB_MOD_KLA(&self) -> bool { (self.0 >> 57 & 0x1) != 0 }
         
 }
-pub struct KLA_A5(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KLA_A5(pub u64);
 
 impl KLA_A5 {
 
 	/// Gets CAN ID of KLA_A5
-	pub fn get_canid() -> u16 { KLA_A5_CAN_ID }
+	pub const fn get_canid() -> u16 { KLA_A5_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Heating power requirement. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: %)
 
     pub fn set_HZL_ANF(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -319,12 +325,14 @@ impl KLA_A5 {
     pub fn get_T_AUSSEN_WM(&self) -> u8 { (self.0 >> 48 & 0xff) as u8 }
         
 }
-pub struct SD_RS_KLA(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_KLA(pub u64);
 
 impl SD_RS_KLA {
 
 	/// Gets CAN ID of SD_RS_KLA
-	pub fn get_canid() -> u16 { SD_RS_KLA_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_KLA_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_KLA_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

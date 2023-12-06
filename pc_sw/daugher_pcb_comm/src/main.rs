@@ -3,61 +3,39 @@ use std::{
     time::{Duration, Instant},
 };
 
-mod agw;
-mod w211can;
+pub mod agw;
+use custom_display_format::CDMIsoTp;
+use w211_can::{*, canbus::{CanBus, frame_to_u64}, socketcan_isotp::{Id, StandardId}, canb::EZS_A1, socketcan::{SocketOptions, CanFilter, Socket}};
+
+const EZS_A1_ID: Id = Id::Standard(unsafe { StandardId::new_unchecked(EZS_A1::get_canid()) });
+
+pub mod custom_display_format;
 
 fn main() {
     env_logger::init();
-    let now = Instant::now();
+    let can_name = CanBus::B.get_net_name().to_string(); // Runs on bus B
+    let agw_socket = w211_can::canbus::CanBus::B.create_isotp_socket(0x1A4, 0x1D0, 50, 0);
 
-    let agw = agw::AgwEmulator::new();
+    let mut vlad = CDMIsoTp::new(can_name.clone());
+    let agw = agw::AgwEmulator::new(can_name, vlad);
     let mut next_down = false;
     let mut prev_down = false;
     let mut stdin = stdin();
 
-    let mrm_can = w211can::CanBus::B.create_can_socket(&[0x0000]).unwrap();
-    const MRM_CAN_ID: u16 = 0x1A8;
-    let mut mrm_data: [u8; 2] = [0x00, 0x00];
-
-    /*
-    for line in stdin.lock().lines() {
-        let l = line.unwrap();
-        if l.starts_with('a') {
-            mrm_data[0] = 0x04;
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_data[0] = 0;
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-        } else if l.starts_with('d') {
-            mrm_data[0] = 0x08;
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_data[0] = 0;
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-            std::thread::sleep(Duration::from_millis(20));
-            mrm_can.send_frame(MRM_CAN_ID, &mrm_data);
-        }
-    }
-    */
+    let ezs_can = CanBus::B.create_can_socket();
+    ezs_can.set_filters(&[CanFilter::new(EZS_A1::get_canid() as u32, 0xFFF)]);
 
     let mut key_in_ezs = true;
-    loop {
-        if let Some(f) = mrm_can.read_frame(0x0000) {
-            if f[0] == 0x01 {
-                key_in_ezs = false;
-            } else {
-                if !key_in_ezs {
-                    agw.wakeup();
-                }
-                key_in_ezs = true;
+
+    while let Ok(frame) = ezs_can.read_frame() {
+        let wrapped = EZS_A1::new(frame_to_u64(&frame).0);
+        if wrapped.get_KL_15R_EIN() {
+            if !key_in_ezs {
+                agw.wakeup();
             }
+            key_in_ezs = true;
+        } else {
+            key_in_ezs = false
         }
-        std::thread::sleep(Duration::from_millis(100));
     }
 }

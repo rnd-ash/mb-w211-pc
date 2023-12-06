@@ -1,0 +1,12 @@
+[Unit]
+Description=GPS Comm service
+StartLimitIntervalSec=1
+
+[Service]
+ExecStart=/mercedes/launch_gps_service.sh
+Restart=always
+RestartSec=1
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

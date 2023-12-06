@@ -13,12 +13,14 @@ pub const OBF_A1_CAN_ID: u16 = 0x002C;
 pub const SD_RS_OBF_CAN_ID: u16 = 0x07C5;
 
 
-pub struct OBF_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct OBF_A1(pub u64);
 
 impl OBF_A1 {
 
 	/// Gets CAN ID of OBF_A1
-	pub fn get_canid() -> u16 { OBF_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { OBF_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets lock ZV (internal switch actuated)
 
     pub fn set_ZV_VERRI_IS(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -160,12 +162,14 @@ impl OBF_A1 {
     pub fn get_WARN_SL_1(&self) -> bool { (self.0 >> 32 & 0x1) != 0 }
         
 }
-pub struct SD_RS_OBF(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_OBF(pub u64);
 
 impl SD_RS_OBF {
 
 	/// Gets CAN ID of SD_RS_OBF
-	pub fn get_canid() -> u16 { SD_RS_OBF_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_OBF_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_OBF_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

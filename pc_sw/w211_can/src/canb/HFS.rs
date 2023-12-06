@@ -39,12 +39,14 @@ impl TryFrom<u8> for HFS_A1_HD_ST {
 	}
 }
 
-pub struct HFS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct HFS_A1(pub u64);
 
 impl HFS_A1 {
 
 	/// Gets CAN ID of HFS_A1
-	pub fn get_canid() -> u16 { HFS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { HFS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Trunk lid status
 
     pub fn set_HD_ST(&mut self, value: HFS_A1_HD_ST){ self.0 = (self.0 & 0x1fffffffffffffff) | ((value as u64) & 0x7) << 61; }
@@ -74,12 +76,14 @@ impl HFS_A1 {
     pub fn get_ALB_WARN(&self) -> bool { (self.0 >> 56 & 0x1) != 0 }
         
 }
-pub struct SD_RS_HFS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_HFS(pub u64);
 
 impl SD_RS_HFS {
 
 	/// Gets CAN ID of SD_RS_HFS
-	pub fn get_canid() -> u16 { SD_RS_HFS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_HFS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_HFS_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

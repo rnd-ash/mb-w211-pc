@@ -145,12 +145,14 @@ impl TryFrom<u8> for SHZ_A1_SH_HR_ST {
 	}
 }
 
-pub struct SHZ_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SHZ_A1(pub u64);
 
 impl SHZ_A1 {
 
 	/// Gets CAN ID of SHZ_A1
-	pub fn get_canid() -> u16 { SHZ_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { SHZ_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Heated/ventilated seats switched off due to undervoltage
 
     pub fn set_SHB_VL_USPG(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -222,12 +224,14 @@ impl SHZ_A1 {
     pub fn get_SH_HR_ST(&self) -> std::result::Result<SHZ_A1_SH_HR_ST, ()> { return SHZ_A1_SH_HR_ST::try_from((self.0 >> 35 & 0x3) as u8) }
         
 }
-pub struct SD_RS_SHZ(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_SHZ(pub u64);
 
 impl SD_RS_SHZ {
 
 	/// Gets CAN ID of SD_RS_SHZ
-	pub fn get_canid() -> u16 { SD_RS_SHZ_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_SHZ_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Reserved for vector format designation BR 211
 
     pub fn set_SHZ_RES(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

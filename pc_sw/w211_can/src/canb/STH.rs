@@ -13,12 +13,14 @@ pub const STH_A1_CAN_ID: u16 = 0x0094;
 pub const SD_RS_STH_CAN_ID: u16 = 0x07D9;
 
 
-pub struct STH_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct STH_A1(pub u64);
 
 impl STH_A1 {
 
 	/// Gets CAN ID of STH_A1
-	pub fn get_canid() -> u16 { STH_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { STH_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Switch on auxiliary heating/ventilation
 
     pub fn set_STHL_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -55,12 +57,14 @@ impl STH_A1 {
     pub fn get_SENDLM_EIN(&self) -> bool { (self.0 >> 57 & 0x1) != 0 }
         
 }
-pub struct SD_RS_STH(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_STH(pub u64);
 
 impl SD_RS_STH {
 
 	/// Gets CAN ID of SD_RS_STH
-	pub fn get_canid() -> u16 { SD_RS_STH_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_STH_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_STH_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

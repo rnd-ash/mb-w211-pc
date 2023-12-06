@@ -83,12 +83,14 @@ impl TryFrom<u8> for WSS_A1_WSS_ID {
 	}
 }
 
-pub struct WSS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct WSS_A1(pub u64);
 
 impl WSS_A1 {
 
 	/// Gets CAN ID of WSS_A1
-	pub fn get_canid() -> u16 { WSS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { WSS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Passenger Detection Fast
 
     pub fn set_PSG_DETECT_FAST(&mut self, value: WSS_A1_PSG_DETECT_FAST){ self.0 = (self.0 & 0xcfffffffffffffff) | ((value as u64) & 0x3) << 60; }
@@ -118,12 +120,14 @@ impl WSS_A1 {
     pub fn get_WSS_ID(&self) -> std::result::Result<WSS_A1_WSS_ID, ()> { return WSS_A1_WSS_ID::try_from((self.0 >> 40 & 0xff) as u8) }
         
 }
-pub struct SD_RS_WSS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_WSS(pub u64);
 
 impl SD_RS_WSS {
 
 	/// Gets CAN ID of SD_RS_WSS
-	pub fn get_canid() -> u16 { SD_RS_WSS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_WSS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets RReserved for vector format identifier BR211
 
     pub fn set_WSS_RES(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

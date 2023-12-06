@@ -14,12 +14,14 @@ pub const SB_A2_CAN_ID: u16 = 0x02B1;
 pub const SD_RS_SB_CAN_ID: u16 = 0x07CD;
 
 
-pub struct SB_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SB_A1(pub u64);
 
 impl SB_A1 {
 
 	/// Gets CAN ID of SB_A1
-	pub fn get_canid() -> u16 { SB_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { SB_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Front passenger seat backrest unlocked
 
     pub fn set_LE_B_ENT(&mut self, value: bool){ self.0 = (self.0 & 0xf7ffffffffffffff) | ((value as u64) & 0x1) << 59; }
@@ -63,12 +65,14 @@ impl SB_A1 {
     pub fn get_SB_POS_K(&self) -> u8 { (self.0 >> 16 & 0xff) as u8 }
         
 }
-pub struct SB_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SB_A2(pub u64);
 
 impl SB_A2 {
 
 	/// Gets CAN ID of SB_A2
-	pub fn get_canid() -> u16 { SB_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { SB_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Passenger memory button pressed
 
     pub fn set_MB_BET(&mut self, value: bool){ self.0 = (self.0 & 0xffbfffffffffffff) | ((value as u64) & 0x1) << 54; }
@@ -119,12 +123,14 @@ impl SB_A2 {
     pub fn get_MB_P1_EN(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct SD_RS_SB(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_SB(pub u64);
 
 impl SD_RS_SB {
 
 	/// Gets CAN ID of SD_RS_SB
-	pub fn get_canid() -> u16 { SD_RS_SB_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_SB_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Reserved for vector format designation BR211
 
     pub fn set_SB_RES(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

@@ -15,12 +15,14 @@ pub const MRM_A3_CAN_ID: u16 = 0x0296;
 pub const SD_RS_MRM_CAN_ID: u16 = 0x07D5;
 
 
-pub struct MRM_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MRM_A1(pub u64);
 
 impl MRM_A1 {
 
 	/// Gets CAN ID of MRM_A1
-	pub fn get_canid() -> u16 { MRM_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { MRM_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on the horn
 
     pub fn set_SGH_EIN_LR(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -148,12 +150,14 @@ impl MRM_A1 {
     pub fn get_LW_B(&self) -> u16 { (self.0 >> 24 & 0x7ff) as u16 }
         
 }
-pub struct MRM_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MRM_A2(pub u64);
 
 impl MRM_A2 {
 
 	/// Gets CAN ID of MRM_A2
-	pub fn get_canid() -> u16 { MRM_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { MRM_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Bottom right button down
 
     pub fn set_WIPPE_4_2(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -267,12 +271,14 @@ impl MRM_A2 {
     pub fn get_WIPPE_5_1(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct MRM_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MRM_A3(pub u64);
 
 impl MRM_A3 {
 
 	/// Gets CAN ID of MRM_A3
-	pub fn get_canid() -> u16 { MRM_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { MRM_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Steering column backwards (towards the driver)
 
     pub fn set_LS_ZUR_MRM(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -400,12 +406,14 @@ impl MRM_A3 {
     pub fn get_DTC9_ELK(&self) -> bool { (self.0 >> 32 & 0x1) != 0 }
         
 }
-pub struct SD_RS_MRM(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_MRM(pub u64);
 
 impl SD_RS_MRM {
 
 	/// Gets CAN ID of SD_RS_MRM
-	pub fn get_canid() -> u16 { SD_RS_MRM_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_MRM_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_MRM_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

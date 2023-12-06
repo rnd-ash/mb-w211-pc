@@ -76,7 +76,7 @@ impl TryFrom<u8> for KOMBI_A1_AMB_LI {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
 pub enum KOMBI_A5_KI_STAT {
-	RESERVIERT = 0, // Unknown
+	RESERVIERT0 = 0, // Unknown
 	RESERVIERT1 = 1, // Unknown
 	NEUTRAL = 2, // Unknown
 	AUDIO = 3, // Audio
@@ -94,7 +94,7 @@ impl TryFrom<u8> for KOMBI_A5_KI_STAT {
 	type Error = ();
 	fn try_from(value: u8) -> Result<Self, Self::Error> {
 		match value {
-			0 => Ok(Self::RESERVIERT),
+			0 => Ok(Self::RESERVIERT0),
 			1 => Ok(Self::RESERVIERT1),
 			2 => Ok(Self::NEUTRAL),
 			3 => Ok(Self::AUDIO),
@@ -114,7 +114,7 @@ impl TryFrom<u8> for KOMBI_A5_KI_STAT {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
 pub enum KOMBI_A8_KI_STAT_MSS {
-	RESERVIERT = 0, // Unknown
+	RESERVIERT0 = 0, // Unknown
 	RESERVIERT1 = 1, // Unknown
 	NEUTRAL = 2, // Unknown
 	AUDIO = 3, // Audio
@@ -132,7 +132,7 @@ impl TryFrom<u8> for KOMBI_A8_KI_STAT_MSS {
 	type Error = ();
 	fn try_from(value: u8) -> Result<Self, Self::Error> {
 		match value {
-			0 => Ok(Self::RESERVIERT),
+			0 => Ok(Self::RESERVIERT0),
 			1 => Ok(Self::RESERVIERT1),
 			2 => Ok(Self::NEUTRAL),
 			3 => Ok(Self::AUDIO),
@@ -203,12 +203,14 @@ impl TryFrom<u8> for KOMBI_A9_KOMBI_IPS_CONF {
 	}
 }
 
-pub struct KOMBI_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A1(pub u64);
 
 impl KOMBI_A1 {
 
 	/// Gets CAN ID of KOMBI_A1
-	pub fn get_canid() -> u16 { KOMBI_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Brightness of instrument lighting. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: %)
 
     pub fn set_KL_58D_B(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -420,12 +422,14 @@ impl KOMBI_A1 {
     pub fn get_ABL_NLZ(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
         
 }
-pub struct KOMBI_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A2(pub u64);
 
 impl KOMBI_A2 {
 
 	/// Gets CAN ID of KOMBI_A2
-	pub fn get_canid() -> u16 { KOMBI_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Daily circulation counter. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: Tage)
 
     pub fn set_TAGE_ZAHL(&mut self, value: u16){ self.0 = (self.0 & 0x0000ffffffffffff) | ((value as u64) & 0xffff) << 48; }
@@ -455,12 +459,14 @@ impl KOMBI_A2 {
     pub fn get_JAHR(&self) -> u8 { (self.0 >> 24 & 0xff) as u8 }
         
 }
-pub struct KOMBI_A5(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A5(pub u64);
 
 impl KOMBI_A5 {
 
 	/// Gets CAN ID of KOMBI_A5
-	pub fn get_canid() -> u16 { KOMBI_A5_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A5_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets status combination
 
     pub fn set_KI_STAT(&mut self, value: KOMBI_A5_KI_STAT){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -637,12 +643,14 @@ impl KOMBI_A5 {
     pub fn get_PTT_1_1(&self) -> bool { (self.0 >> 32 & 0x1) != 0 }
         
 }
-pub struct KOMBI_A6(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A6(pub u64);
 
 impl KOMBI_A6 {
 
 	/// Gets CAN ID of KOMBI_A6
-	pub fn get_canid() -> u16 { KOMBI_A6_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A6_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets KOMBI key ID. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
     pub fn set_SCHLUE_ID_KI(&mut self, value: u32){ self.0 = (self.0 & 0x00000000ffffffff) | ((value as u64) & 0xffffffff) << 32; }
@@ -658,12 +666,14 @@ impl KOMBI_A6 {
     pub fn get_KM_KI(&self) -> u32 { (self.0 >> 8 & 0xffffff) as u32 }
         
 }
-pub struct KOMBI_A7(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A7(pub u64);
 
 impl KOMBI_A7 {
 
 	/// Gets CAN ID of KOMBI_A7
-	pub fn get_canid() -> u16 { KOMBI_A7_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A7_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Display dimming. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: %)
 
     pub fn set_DISP_DIMM(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -686,12 +696,14 @@ impl KOMBI_A7 {
     pub fn get_KOMBI_MW_OK(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct KOMBI_A8(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A8(pub u64);
 
 impl KOMBI_A8 {
 
 	/// Gets CAN ID of KOMBI_A8
-	pub fn get_canid() -> u16 { KOMBI_A8_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A8_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets status combination
 
     pub fn set_KI_STAT_MSS(&mut self, value: KOMBI_A8_KI_STAT_MSS){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -868,12 +880,14 @@ impl KOMBI_A8 {
     pub fn get_PTT_1_1_MSS(&self) -> bool { (self.0 >> 32 & 0x1) != 0 }
         
 }
-pub struct KOMBI_A9(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KOMBI_A9(pub u64);
 
 impl KOMBI_A9 {
 
 	/// Gets CAN ID of KOMBI_A9
-	pub fn get_canid() -> u16 { KOMBI_A9_CAN_ID }
+	pub const fn get_canid() -> u16 { KOMBI_A9_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets IPS update request
 
     pub fn set_KOMBI_IPS_UPD(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -896,12 +910,14 @@ impl KOMBI_A9 {
     pub fn get_KOMBI_IPS_CONF(&self) -> std::result::Result<KOMBI_A9_KOMBI_IPS_CONF, ()> { return KOMBI_A9_KOMBI_IPS_CONF::try_from((self.0 >> 56 & 0xf) as u8) }
         
 }
-pub struct SD_RS_KOMBI(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_KOMBI(pub u64);
 
 impl SD_RS_KOMBI {
 
 	/// Gets CAN ID of SD_RS_KOMBI
-	pub fn get_canid() -> u16 { SD_RS_KOMBI_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_KOMBI_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_KOMBI_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

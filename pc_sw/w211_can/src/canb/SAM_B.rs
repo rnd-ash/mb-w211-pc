@@ -14,12 +14,14 @@ pub const SAM_B_A2_CAN_ID: u16 = 0x0260;
 pub const SD_RS_SAM_B_CAN_ID: u16 = 0x07C1;
 
 
-pub struct SAM_B_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_B_A1(pub u64);
 
 impl SAM_B_A1 {
 
 	/// Gets CAN ID of SAM_B_A1
-	pub fn get_canid() -> u16 { SAM_B_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_B_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets reverse gear engaged (manual gearbox only)
 
     pub fn set_RG_SAM_B(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -133,12 +135,14 @@ impl SAM_B_A1 {
     pub fn get_KL_30A_EIN(&self) -> bool { (self.0 >> 37 & 0x1) != 0 }
         
 }
-pub struct SAM_B_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SAM_B_A2(pub u64);
 
 impl SAM_B_A2 {
 
 	/// Gets CAN ID of SAM_B_A2
-	pub fn get_canid() -> u16 { SAM_B_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { SAM_B_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Trigger the horn warning
 
     pub fn set_HUPE_EIN(&mut self, value: bool){ self.0 = (self.0 & 0xfeffffffffffffff) | ((value as u64) & 0x1) << 56; }
@@ -154,12 +158,14 @@ impl SAM_B_A2 {
     pub fn get_HUPEN_EIN_ZEIT(&self) -> u8 { (self.0 >> 48 & 0xff) as u8 }
         
 }
-pub struct SD_RS_SAM_B(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_SAM_B(pub u64);
 
 impl SD_RS_SAM_B {
 
 	/// Gets CAN ID of SD_RS_SAM_B
-	pub fn get_canid() -> u16 { SD_RS_SAM_B_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_SAM_B_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_SAM_B_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

@@ -26,6 +26,7 @@ public:
     bool hazards_state_change = false;
     bool hazards_pressed = false;
     uint64_t led_on_expire_time = 0;
+    uint64_t last_rx_time = 0;
 private:
     [[noreturn]]
     void tx_task();

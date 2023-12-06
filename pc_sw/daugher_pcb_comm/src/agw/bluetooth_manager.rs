@@ -64,9 +64,10 @@ impl BluetoothManager {
             sender.send(AgwCommand::SetAudioPage(BT_IDLE_STATE.clone()));
             let connection = Connection::new_system().unwrap();
             let mut rule = MatchRule::new();
+            let mut dev_name: Option<String> = None;
+            let mut track_name: Option<String> = None;
             loop {
                 let mut act = false;
-                let mut dev_name: Option<String> = None;
                 let mut dev: Option<Device> = None;
                 rt.block_on(async {
                     for addr in adapter.device_addresses().await.unwrap() {
@@ -84,6 +85,7 @@ impl BluetoothManager {
                     if connected_device_t.read().unwrap().is_some() != dev_name.is_some() {
                         if dev_name.is_none() {
                             sender.send(AgwCommand::SetAudioPage(BT_IDLE_STATE.clone()));
+                            track_name = None;
                         } else {
                             sender.send(AgwCommand::SetAudioPage(AudioPageState {
                                 header_text: IcText {
@@ -131,18 +133,18 @@ impl BluetoothManager {
                     if let Ok(meta) = proxy.get::<PropMap>("org.bluez.MediaPlayer1", "Track") {
                         act = true;
                         if let Some(track) = meta.get_key_value("Title") {
-                            let track_name = track.1.as_str().unwrap();
-                            let mut tx_text = Some(String::from("Not playing"));
-                            if !track_name.is_empty() {
-                                tx_text.replace(track_name.to_string());
-                            }
-                            if dev_name != tx_text {
-                                dev_name = tx_text;
+                            let t = Some(track.1.as_str().unwrap().to_string());
+                            if t != track_name {
+                                track_name = t;
+                                let name = track_name.clone().unwrap();
+                                println!("New track {}", name);
                                 sender.send(AgwCommand::SetAudioBodyText(IcText {
                                     format: TextFmtFlags::CENTER,
-                                    text: dev_name.clone().unwrap(),
+                                    text: name.clone(),
                                 }));
-                                if track_name.is_empty() {
+                                
+                                sender.send(AgwCommand::TrackUpdate(name.clone()));
+                                if name.is_empty() {
                                     sender.send(AgwCommand::SetAudioSymbols(
                                         AudioSymbol::None,
                                         AudioSymbol::None,

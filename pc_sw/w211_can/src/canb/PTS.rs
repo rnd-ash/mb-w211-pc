@@ -12,12 +12,14 @@
 pub const SD_RS_PTS_CAN_ID: u16 = 0x07D3;
 
 
-pub struct SD_RS_PTS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_PTS(pub u64);
 
 impl SD_RS_PTS {
 
 	/// Gets CAN ID of SD_RS_PTS
-	pub fn get_canid() -> u16 { SD_RS_PTS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_PTS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_PTS_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

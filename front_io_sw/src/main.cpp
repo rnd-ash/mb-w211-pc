@@ -43,7 +43,7 @@ const PwmIo BackLightPwmConfig = {
 };
 
 const PwmIo FanPwmConfig = {
-    .freq = 1000,
+    .freq = 5000,
     .pin = PIN_COOLER_FAN,
     .channel = ledc_channel_t::LEDC_CHANNEL_1,
     .timer = ledc_timer_t::LEDC_TIMER_1
@@ -58,7 +58,7 @@ void turn_off_pwm_channel(PwmIo pwm_cfg) {
 void configure_pwm_channel(PwmIo pwm_cfg, uint16_t initial_freq) {
     gpio_set_direction(pwm_cfg.pin, gpio_mode_t::GPIO_MODE_OUTPUT);
     ledc_timer_config_t timer_cfg = {
-        .speed_mode = ledc_mode_t::LEDC_LOW_SPEED_MODE, // Low speed timer mode
+        .speed_mode = ledc_mode_t::LEDC_HIGH_SPEED_MODE, // Low speed timer mode
         .duty_resolution = LEDC_TIMER_8_BIT,
         .timer_num = pwm_cfg.timer,
         .freq_hz = pwm_cfg.freq,
@@ -66,7 +66,7 @@ void configure_pwm_channel(PwmIo pwm_cfg, uint16_t initial_freq) {
     };
     ledc_channel_config_t channel_cfg = {
         .gpio_num = pwm_cfg.pin,
-        .speed_mode = ledc_mode_t::LEDC_LOW_SPEED_MODE,
+        .speed_mode = ledc_mode_t::LEDC_HIGH_SPEED_MODE,
         .channel = pwm_cfg.channel,
         .intr_type = LEDC_INTR_DISABLE, // Disable fade interrupt
         .timer_sel = pwm_cfg.timer,
@@ -75,12 +75,11 @@ void configure_pwm_channel(PwmIo pwm_cfg, uint16_t initial_freq) {
     };
     ledc_timer_config(&timer_cfg);
     ledc_channel_config(&channel_cfg);
-    ledc_set_duty(ledc_mode_t::LEDC_LOW_SPEED_MODE, pwm_cfg.channel, initial_freq);
-    ledc_update_duty(ledc_mode_t::LEDC_LOW_SPEED_MODE, pwm_cfg.channel);
+    ledc_set_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, pwm_cfg.channel, initial_freq);
+    ledc_update_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, pwm_cfg.channel);
 }
 
 Can* can;
-
 static void IRAM_ATTR on_hazards_pressed(void *args) {
     uint64_t now = esp_timer_get_time()/ 1000;
     if (now > last_btn_time + 100) { // Debounce check
@@ -94,7 +93,8 @@ void sleep_and_wakeup() {
     gpio_set_level(PIN_5V_SHUTOFF, 0); // Shut down 5V rail for the HDMI board
     gpio_set_level(HZARD_LIGHT_PIN, 0); // Turn off hazards light pin
     gpio_set_level(HZARD_BACKLIGHT_PIN, 0); // Turn off hazard backlight pin
-    turn_off_pwm_channel(FanPwmConfig);
+    gpio_set_level(PIN_COOLER_FAN, 0); // Turn off fan
+    //turn_off_pwm_channel(FanPwmConfig);
     turn_off_pwm_channel(BackLightPwmConfig);
     gpio_isr_handler_remove(HZARD_PIN);
     
@@ -112,7 +112,8 @@ void sleep_and_wakeup() {
     gpio_set_direction(HZARD_PIN, gpio_mode_t::GPIO_MODE_INPUT);
     gpio_set_intr_type(HZARD_PIN, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(HZARD_PIN, on_hazards_pressed, nullptr);
-    configure_pwm_channel(FanPwmConfig, 128); // Configure fan
+    gpio_set_level(PIN_COOLER_FAN, 1);
+    //configure_pwm_channel(FanPwmConfig, 192); // Configure fan
     configure_pwm_channel(BackLightPwmConfig, 128); // Configure backlight
     gpio_set_level(PIN_5V_SHUTOFF, 1);
 }
@@ -122,8 +123,8 @@ void backlight_demo(void*) {
     uint8_t pwm_target = 0xFF;
     while(1) {
         pwm_target = can->get_light_level_target_display();
-        ledc_set_duty(ledc_mode_t::LEDC_LOW_SPEED_MODE, BackLightPwmConfig.channel, 0xFF-pwm);
-        ledc_update_duty(ledc_mode_t::LEDC_LOW_SPEED_MODE, BackLightPwmConfig.channel);
+        ledc_set_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, BackLightPwmConfig.channel, 0xFF-pwm);
+        ledc_update_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, BackLightPwmConfig.channel);
         if (pwm_target > pwm) {
             pwm += 1;
         } else if (pwm_target < pwm) {
@@ -143,11 +144,12 @@ extern "C" void app_main(void) {
     gpio_isr_handler_add(HZARD_PIN, on_hazards_pressed, nullptr);
     gpio_set_level(HZARD_LIGHT_PIN, 1);
     gpio_set_level(PIN_5V_SHUTOFF, 1);
+    gpio_set_level(PIN_COOLER_FAN, 1);
     can = new Can();
     can->setup_tasks();
     can->setup();
     configure_pwm_channel(BackLightPwmConfig, 128);
-    configure_pwm_channel(FanPwmConfig, 128);
+    //configure_pwm_channel(FanPwmConfig, 192);
     twai_message_t read;
     uint64_t last_wake_time = 0;
     uint8_t blight_pwm = 0;
@@ -156,7 +158,7 @@ extern "C" void app_main(void) {
         uint64_t now = esp_timer_get_time()/1000;
         //ESP_LOGI("MAIN", "Hazards is %d", can->hazards_pressed);
         gpio_set_level(HZARD_LIGHT_PIN, can->led_on_expire_time >= now);
-        if (can->can_passive_send_data()) {
+        if (can->can_passive_send_data() || now < can->last_rx_time + 1000) {
             last_can_time = esp_timer_get_time()/1000;
             last_wake_time = esp_timer_get_time()/1000;
         }

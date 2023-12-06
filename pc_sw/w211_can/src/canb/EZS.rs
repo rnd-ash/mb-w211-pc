@@ -12,7 +12,6 @@
 pub const EZS_A1_CAN_ID: u16 = 0x0000;
 pub const EZS_A12_CAN_ID: u16 = 0x0180;
 pub const EZS_A4_CAN_ID: u16 = 0x0058;
-pub const EZS_A9_CAN_ID: u16 = 0x00B2;
 pub const KG_A1_CAN_ID: u16 = 0x01B2;
 pub const KG_A2_CAN_ID: u16 = 0x0050;
 pub const EZS_ANZ_CAN_ID: u16 = 0x0332;
@@ -29,7 +28,7 @@ pub enum EZS_A1_SPEI_NR {
 	NICHT_DEFINIERT_4 = 4, // Unknown
 	NICHT_DEFINIERT_5 = 5, // Unknown
 	NICHT_DEFINIERT_6 = 6, // Unknown
-	SIGNAL_NICHT_VERFUGBAR = 7, // Unknown
+	SIGNAL_NICHT_VERFÜGBAR = 7, // Unknown
 }
 
 impl TryFrom<u8> for EZS_A1_SPEI_NR {
@@ -43,7 +42,7 @@ impl TryFrom<u8> for EZS_A1_SPEI_NR {
 			4 => Ok(Self::NICHT_DEFINIERT_4),
 			5 => Ok(Self::NICHT_DEFINIERT_5),
 			6 => Ok(Self::NICHT_DEFINIERT_6),
-			7 => Ok(Self::SIGNAL_NICHT_VERFUGBAR),
+			7 => Ok(Self::SIGNAL_NICHT_VERFÜGBAR),
 			_ => Err(())
 		}
 	}
@@ -78,35 +77,15 @@ impl TryFrom<u8> for EZS_A12_MOB_STAT {
 		}
 	}
 }
-/// VIN signal part
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum EZS_A9_VIN_MSG {
-	N_DEF = 0, // undefined
-	LO = 1, // VIN characters 1 - 7
-	MID = 2, // VIN characters 8 - 14
-	HI = 3, // VIN characters 15 - 17
-}
 
-impl TryFrom<u8> for EZS_A9_VIN_MSG {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::N_DEF),
-			1 => Ok(Self::LO),
-			2 => Ok(Self::MID),
-			3 => Ok(Self::HI),
-			_ => Err(())
-		}
-	}
-}
-
-pub struct EZS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct EZS_A1(pub u64);
 
 impl EZS_A1 {
 
 	/// Gets CAN ID of EZS_A1
-	pub fn get_canid() -> u16 { EZS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { EZS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Keyless Go terminal control active
 
     pub fn set_KG_KL_AKT(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -367,12 +346,14 @@ impl EZS_A1 {
     pub fn get_TVL_ENTRI(&self) -> bool { (self.0 >> 16 & 0x1) != 0 }
         
 }
-pub struct EZS_A12(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct EZS_A12(pub u64);
 
 impl EZS_A12 {
 
 	/// Gets CAN ID of EZS_A12
-	pub fn get_canid() -> u16 { EZS_A12_CAN_ID }
+	pub const fn get_canid() -> u16 { EZS_A12_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Mobility account status
 
     pub fn set_MOB_STAT(&mut self, value: EZS_A12_MOB_STAT){ self.0 = (self.0 & 0x1fffffffffffffff) | ((value as u64) & 0x7) << 61; }
@@ -388,12 +369,14 @@ impl EZS_A12 {
     pub fn get_MOB_AKT(&self) -> bool { (self.0 >> 55 & 0x1) != 0 }
         
 }
-pub struct EZS_A4(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct EZS_A4(pub u64);
 
 impl EZS_A4 {
 
 	/// Gets CAN ID of EZS_A4
-	pub fn get_canid() -> u16 { EZS_A4_CAN_ID }
+	pub const fn get_canid() -> u16 { EZS_A4_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets KeyID from EZS. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
     pub fn set_SCHLUE_ID(&mut self, value: u32){ self.0 = (self.0 & 0x00000000ffffffff) | ((value as u64) & 0xffffffff) << 32; }
@@ -409,26 +392,14 @@ impl EZS_A4 {
     pub fn get_KM_EZS(&self) -> u32 { (self.0 >> 8 & 0xffffff) as u32 }
         
 }
-pub struct EZS_A9(u64);
-
-impl EZS_A9 {
-
-	/// Gets CAN ID of EZS_A9
-	pub fn get_canid() -> u16 { EZS_A9_CAN_ID }
-    /// Sets VIN signal part
-
-    pub fn set_VIN_MSG(&mut self, value: EZS_A9_VIN_MSG){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
-
-    /// Gets VIN signal part
-    pub fn get_VIN_MSG(&self) -> std::result::Result<EZS_A9_VIN_MSG, ()> { return EZS_A9_VIN_MSG::try_from((self.0 >> 56 & 0x3) as u8) }
-        
-}
-pub struct KG_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KG_A1(pub u64);
 
 impl KG_A1 {
 
 	/// Gets CAN ID of KG_A1
-	pub fn get_canid() -> u16 { KG_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { KG_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Message 5: "Please selector lever in P or N position"
 
     pub fn set_M5(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -535,12 +506,14 @@ impl KG_A1 {
     pub fn get_KM_REST_KG(&self) -> u8 { (self.0 >> 40 & 0xff) as u8 }
         
 }
-pub struct KG_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct KG_A2(pub u64);
 
 impl KG_A2 {
 
 	/// Gets CAN ID of KG_A2
-	pub fn get_canid() -> u16 { KG_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { KG_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Open/close rear right window
 
     pub fn set_FHR_KG(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -591,12 +564,14 @@ impl KG_A2 {
     pub fn get_KB_MOD_KG(&self) -> bool { (self.0 >> 57 & 0x1) != 0 }
         
 }
-pub struct EZS_ANZ(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct EZS_ANZ(pub u64);
 
 impl EZS_ANZ {
 
 	/// Gets CAN ID of EZS_ANZ
-	pub fn get_canid() -> u16 { EZS_ANZ_CAN_ID }
+	pub const fn get_canid() -> u16 { EZS_ANZ_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Message 7: "MK "
 
     pub fn set_EZS_M7(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -654,12 +629,14 @@ impl EZS_ANZ {
     pub fn get_EZS_M0(&self) -> bool { (self.0 >> 56 & 0x1) != 0 }
         
 }
-pub struct SD_RS_EZS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_EZS(pub u64);
 
 impl SD_RS_EZS {
 
 	/// Gets CAN ID of SD_RS_EZS
-	pub fn get_canid() -> u16 { SD_RS_EZS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_EZS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_EZS_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

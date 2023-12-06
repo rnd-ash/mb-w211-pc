@@ -13,12 +13,14 @@ pub const LRK_A1_CAN_ID: u16 = 0x0288;
 pub const SD_RS_LRK_CAN_ID: u16 = 0x07CF;
 
 
-pub struct LRK_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LRK_A1(pub u64);
 
 impl LRK_A1 {
 
 	/// Gets CAN ID of LRK_A1
-	pub fn get_canid() -> u16 { LRK_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { LRK_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Switch on LED steering wheel ventilation
 
     pub fn set_LLFT_LED_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -55,12 +57,14 @@ impl LRK_A1 {
     pub fn get_LHZG_EIN(&self) -> bool { (self.0 >> 59 & 0x1) != 0 }
         
 }
-pub struct SD_RS_LRK(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_LRK(pub u64);
 
 impl SD_RS_LRK {
 
 	/// Gets CAN ID of SD_RS_LRK
-	pub fn get_canid() -> u16 { SD_RS_LRK_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_LRK_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_LRK_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

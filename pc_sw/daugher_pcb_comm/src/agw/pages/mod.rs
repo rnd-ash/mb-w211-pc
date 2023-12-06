@@ -27,6 +27,7 @@ pub struct IcText {
 }
 
 bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct TextFmtFlags: u8 {
         const NONE = 0x00;
         const LEFT = 0x01;

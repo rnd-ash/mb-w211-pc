@@ -1,0 +1,11 @@
+[package]
+name = "w211_gps_service"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nmea0183 = "0.3.1"
+serial-rs = {git="https://github.com/rnd-ash/serial-rs"}
+w211_can = { path="../w211_can" }

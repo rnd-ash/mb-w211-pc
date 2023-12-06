@@ -21,10 +21,10 @@ ECU EZS
 			ENUM SPEICHER1, RAW: 0, DESC: memory block 1
 			ENUM SPEICHER2, RAW: 1, DESC: memory block 2
 			ENUM SPEICHER3, RAW: 2, DESC: memory block 3
-			ENUM nicht definiert, RAW: 3, DESC: Unknown
-			ENUM nicht definiert, RAW: 4, DESC: Unknown
-			ENUM nicht definiert, RAW: 5, DESC: Unknown
-			ENUM nicht definiert, RAW: 6, DESC: Unknown
+			ENUM nicht definiert 3, RAW: 3, DESC: Unknown
+			ENUM nicht definiert 4, RAW: 4, DESC: Unknown
+			ENUM nicht definiert 5, RAW: 5, DESC: Unknown
+			ENUM nicht definiert 6, RAW: 6, DESC: Unknown
 			ENUM Signal nicht verfügbar, RAW: 7, DESC: Unknown
 		SIGNAL AUSS_SICH, OFFSET: 24, LEN: 1, DESC: external security, DATA TYPE BOOL
 		SIGNAL AUSS_ENTSI, OFFSET: 25, LEN: 1, DESC: external arming, DATA TYPE BOOL
@@ -62,13 +62,6 @@ ECU EZS
 	FRAME EZS_A4 (0x00000058)
 		SIGNAL SCHLUE_ID, OFFSET: 0, LEN: 32, DESC: KeyID from EZS, DATA TYPE NUMBER(_MULTIPLIER_: 1.0, _OFFSET_: 0.0)
 		SIGNAL KM_EZS, OFFSET: 32, LEN: 24, DESC: kilometer reading sent by the EZS, DATA TYPE NUMBER(_MULTIPLIER_: 0.10000000149011612, _OFFSET_: 0.0), UNIT: km
-	FRAME EZS_A9 (0x000000B2)
-		SIGNAL VIN_MSG, OFFSET: 6, LEN: 2, DESC: VIN signal part, DATA TYPE ENUM
-			ENUM N_DEF, RAW: 0, DESC: undefined
-			ENUM LO, RAW: 1, DESC: VIN characters 1 - 7
-			ENUM MID, RAW: 2, DESC: VIN characters 8 - 14
-			ENUM HI, RAW: 3, DESC: VIN characters 15 - 17
-		SIGNAL VIN_DATA, OFFSET: 8, LEN: 56, DESC: VIN data, DATA TYPE ISO_TP
 	FRAME KG_A1 (0x000001B2)
 		SIGNAL M5, OFFSET: 0, LEN: 1, DESC: Message 5: "Please selector lever in P or N position", DATA TYPE BOOL
 		SIGNAL M4, OFFSET: 1, LEN: 1, DESC: Message 4: "Check chip card/key battery" (white), DATA TYPE BOOL
@@ -335,42 +328,42 @@ ECU ZGW
 		SIGNAL WWSH_VH, OFFSET: 63, LEN: 1, DESC: washer fluid hose heating RL or C490 [0], LL or C875 [1], DATA TYPE BOOL
 	FRAME ZGW_A6 (0x0000001E)
 		SIGNAL VER_JAHR, OFFSET: 1, LEN: 5, DESC: year, DATA TYPE ENUM
-			ENUM 2000, RAW: 0, DESC: Unknown
-			ENUM 2001, RAW: 1, DESC: Unknown
-			ENUM 2002, RAW: 2, DESC: Unknown
-			ENUM 2003, RAW: 3, DESC: Unknown
-			ENUM 2004, RAW: 4, DESC: Unknown
-			ENUM 2005, RAW: 5, DESC: Unknown
-			ENUM 2006, RAW: 6, DESC: Unknown
-			ENUM 2007, RAW: 7, DESC: Unknown
-			ENUM 2008, RAW: 8, DESC: Unknown
-			ENUM 2009, RAW: 9, DESC: Unknown
-			ENUM 2010, RAW: 10, DESC: Unknown
-			ENUM 2011, RAW: 11, DESC: Unknown
-			ENUM 2012, RAW: 12, DESC: Unknown
-			ENUM 2013, RAW: 13, DESC: Unknown
-			ENUM 2014, RAW: 14, DESC: Unknown
-			ENUM 2015, RAW: 15, DESC: Unknown
-			ENUM 2016, RAW: 16, DESC: Unknown
-			ENUM 2017, RAW: 17, DESC: Unknown
-			ENUM 2018, RAW: 18, DESC: Unknown
-			ENUM 2019, RAW: 19, DESC: Unknown
-			ENUM 2020, RAW: 20, DESC: Unknown
-			ENUM 2021, RAW: 21, DESC: Unknown
-			ENUM 2022, RAW: 22, DESC: Unknown
-			ENUM 2023, RAW: 23, DESC: Unknown
-			ENUM 2024, RAW: 24, DESC: Unknown
-			ENUM 2025, RAW: 25, DESC: Unknown
-			ENUM 2026, RAW: 26, DESC: Unknown
-			ENUM 2027, RAW: 27, DESC: Unknown
-			ENUM 2028, RAW: 28, DESC: Unknown
-			ENUM 2029, RAW: 29, DESC: Unknown
-			ENUM N_DEF, RAW: 30, DESC: undefined
+			ENUM Y2000, RAW: 0, DESC: Unknown
+			ENUM Y2001, RAW: 1, DESC: Unknown
+			ENUM Y2002, RAW: 2, DESC: Unknown
+			ENUM Y2003, RAW: 3, DESC: Unknown
+			ENUM Y2004, RAW: 4, DESC: Unknown
+			ENUM Y2005, RAW: 5, DESC: Unknown
+			ENUM Y2006, RAW: 6, DESC: Unknown
+			ENUM Y2007, RAW: 7, DESC: Unknown
+			ENUM Y2008, RAW: 8, DESC: Unknown
+			ENUM Y2009, RAW: 9, DESC: Unknown
+			ENUM Y2010, RAW: 10, DESC: Unknown
+			ENUM Y2011, RAW: 11, DESC: Unknown
+			ENUM Y2012, RAW: 12, DESC: Unknown
+			ENUM Y2013, RAW: 13, DESC: Unknown
+			ENUM Y2014, RAW: 14, DESC: Unknown
+			ENUM Y2015, RAW: 15, DESC: Unknown
+			ENUM Y2016, RAW: 16, DESC: Unknown
+			ENUM Y2017, RAW: 17, DESC: Unknown
+			ENUM Y2018, RAW: 18, DESC: Unknown
+			ENUM Y2019, RAW: 19, DESC: Unknown
+			ENUM Y2020, RAW: 20, DESC: Unknown
+			ENUM Y2021, RAW: 21, DESC: Unknown
+			ENUM Y2022, RAW: 22, DESC: Unknown
+			ENUM Y2023, RAW: 23, DESC: Unknown
+			ENUM Y2024, RAW: 24, DESC: Unknown
+			ENUM Y2025, RAW: 25, DESC: Unknown
+			ENUM Y2026, RAW: 26, DESC: Unknown
+			ENUM Y2027, RAW: 27, DESC: Unknown
+			ENUM Y2028, RAW: 28, DESC: Unknown
+			ENUM Y2029, RAW: 29, DESC: Unknown
+			ENUM YN_DEF, RAW: 30, DESC: undefined
 			ENUM SB, RAW: 31, DESC: Start of series production
 		SIGNAL VER_AE, OFFSET: 6, LEN: 2, DESC: Year of change, DATA TYPE ENUM
-			ENUM /1, RAW: 0, DESC: Unknown
-			ENUM /X, RAW: 1, DESC: Unknown
-			ENUM /2, RAW: 2, DESC: Unknown
+			ENUM V1, RAW: 0, DESC: Unknown
+			ENUM VX, RAW: 1, DESC: Unknown
+			ENUM V2, RAW: 2, DESC: Unknown
 			ENUM SB, RAW: 3, DESC: Start of series production
 	FRAME GW_C_B1 (0x00000002)
 		SIGNAL RIZ_VL, OFFSET: 0, LEN: 8, DESC: Pulse ring counter, front left wheel (48 per revolution), DATA TYPE NUMBER(_MULTIPLIER_: 1.0, _OFFSET_: 0.0), UNIT: Impulse
@@ -706,8 +699,8 @@ ECU KOMBI
 			ENUM PRIO3, RAW: 3, DESC: Priority 3
 	FRAME KOMBI_A5 (0x000001CA)
 		SIGNAL KI_STAT, OFFSET: 0, LEN: 8, DESC: status combination, DATA TYPE ENUM
-			ENUM reserviert, RAW: 0, DESC: Unknown
-			ENUM reserviert, RAW: 1, DESC: Unknown
+			ENUM reserviert0, RAW: 0, DESC: Unknown
+			ENUM reserviert1, RAW: 1, DESC: Unknown
 			ENUM Neutral, RAW: 2, DESC: Unknown
 			ENUM AUDIO, RAW: 3, DESC: Audio
 			ENUM NAVI, RAW: 4, DESC: Navigation
@@ -718,16 +711,14 @@ ECU KOMBI
 			ENUM SPR_FNK_DLG_OPN, RAW: 21, DESC: Voice radio AI Dlg opened
 			ENUM DAT_FNK_DLG_OPN, RAW: 22, DESC: Data radio AI Dlg opened
 			ENUM SNV, RAW: 255, DESC: Signal not available
-		SIGNAL BUTTON_4_2, OFFSET: 8, LEN: 1, DESC: Telephone End, DATA TYPE BOOL 0b1
-		SIGNAL BUTTON_4_1, OFFSET: 9, LEN: 1, DESC: Phone send, DATA TYPE BOOL 0b10
-		SIGNAL BUTTON_3_2, OFFSET: 10, LEN: 1, DESC: key "-", DATA TYPE BOOL 0b100
-		SIGNAL BUTTON_3_1, OFFSET: 11, LEN: 1, DESC: "+" button, DATA TYPE BOOL 0b1000
-
+		SIGNAL BUTTON_4_2, OFFSET: 8, LEN: 1, DESC: Telephone End, DATA TYPE BOOL
+		SIGNAL BUTTON_4_1, OFFSET: 9, LEN: 1, DESC: Phone send, DATA TYPE BOOL
+		SIGNAL BUTTON_3_2, OFFSET: 10, LEN: 1, DESC: key "-", DATA TYPE BOOL
+		SIGNAL BUTTON_3_1, OFFSET: 11, LEN: 1, DESC: "+" button, DATA TYPE BOOL
 		SIGNAL BUTTON_2_2, OFFSET: 12, LEN: 1, DESC: reserves, DATA TYPE BOOL
 		SIGNAL BUTTON_2_1, OFFSET: 13, LEN: 1, DESC: reserves, DATA TYPE BOOL
 		SIGNAL BUTTON_1_2, OFFSET: 14, LEN: 1, DESC: Previous screen, DATA TYPE BOOL
 		SIGNAL BUTTON_1_1, OFFSET: 15, LEN: 1, DESC: Next screen, DATA TYPE BOOL
-
 		SIGNAL BUTTON_8_2, OFFSET: 16, LEN: 1, DESC: reserves, DATA TYPE BOOL
 		SIGNAL BUTTON_8_1, OFFSET: 17, LEN: 1, DESC: reserves, DATA TYPE BOOL
 		SIGNAL BUTTON_7_2, OFFSET: 18, LEN: 1, DESC: reserves, DATA TYPE BOOL
@@ -753,8 +744,8 @@ ECU KOMBI
 		SIGNAL KOMBI_MW_OK, OFFSET: 15, LEN: 1, DESC: Kombi is capable of added value, DATA TYPE BOOL
 	FRAME KOMBI_A8 (0x0000032A)
 		SIGNAL KI_STAT_MSS, OFFSET: 0, LEN: 8, DESC: status combination, DATA TYPE ENUM
-			ENUM reserviert, RAW: 0, DESC: Unknown
-			ENUM reserviert, RAW: 1, DESC: Unknown
+			ENUM reserviert0, RAW: 0, DESC: Unknown
+			ENUM reserviert1, RAW: 1, DESC: Unknown
 			ENUM Neutral, RAW: 2, DESC: Unknown
 			ENUM AUDIO, RAW: 3, DESC: Audio
 			ENUM NAVI, RAW: 4, DESC: Navigation
@@ -906,22 +897,42 @@ ECU MRM
 		SIGNAL LW_VZ_B, OFFSET: 28, LEN: 1, DESC: Steering angle sign (right [0], left [1]), DATA TYPE BOOL
 		SIGNAL LW_B, OFFSET: 29, LEN: 11, DESC: steering angle, DATA TYPE NUMBER(_MULTIPLIER_: 0.5, _OFFSET_: 0.0), UNIT: °
 	FRAME MRM_A2 (0x000001A8)
+		// MUX byte
+		// 10 - Custom key (W213 wheel)
+		//		00 - None (Treat first byte as just volume+ key press)
+		//		01 - Left back
+		//		02 - Left home
+		//		03 - Right back
+		//		04 - Right home
+		//		05 - Voice assistant
+		//		06 - Fav
+		//		07 - Mute
+		//		08 - Left OK (Touchpad press)
+		//		09 - Right OK (Touchpad press)
+		//		0A - Shift paddle+ (Pc will forward this to CAN C)
+		//		0B - Shift paddle- (Pc will forward this to CAN C)
+		// 70 - Right Touchpad inertia data (X axis)
+		// 30 - Right Touchpad inertia data (Y axis)
+		// 60 - Left Touchpad inertia data (X axis)
+		// 20 - Left Touchpad inertia data (Y axis)
+		//		xx - Movemenet since last update. 7E is 0, < 7E is negative, > 7E is positive
+
 		SIGNAL WIPPE_4_2, OFFSET: 0, LEN: 1, DESC: Bottom right button down, DATA TYPE BOOL
 		SIGNAL WIPPE_4_1, OFFSET: 1, LEN: 1, DESC: Bottom right button up, DATA TYPE BOOL
 		SIGNAL WIPPE_3_2, OFFSET: 2, LEN: 1, DESC: Key right top down, DATA TYPE BOOL
 		SIGNAL WIPPE_3_1, OFFSET: 3, LEN: 1, DESC: Top right button up, DATA TYPE BOOL
-		SIGNAL WIPPE_2_2, OFFSET: 4, LEN: 1, DESC: Bottom left button down, DATA TYPE BOOL
-		SIGNAL WIPPE_2_1, OFFSET: 5, LEN: 1, DESC: Bottom left button up, DATA TYPE BOOL
-		SIGNAL WIPPE_1_2, OFFSET: 6, LEN: 1, DESC: Top left key down, DATA TYPE BOOL
-		SIGNAL WIPPE_1_1, OFFSET: 7, LEN: 1, DESC: Top left button up, DATA TYPE BOOL
-		SIGNAL WIPPE_8_2, OFFSET: 8, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_8_1, OFFSET: 9, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_7_2, OFFSET: 10, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_7_1, OFFSET: 11, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_6_2, OFFSET: 12, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_6_1, OFFSET: 13, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_5_2, OFFSET: 14, LEN: 1, DESC: reserves, DATA TYPE BOOL
-		SIGNAL WIPPE_5_1, OFFSET: 15, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_2_2, OFFSET: 4, LEN: 1, DESC: Bottom left button down, DATA TYPE BOOL
+		#SIGNAL WIPPE_2_1, OFFSET: 5, LEN: 1, DESC: Bottom left button up, DATA TYPE BOOL
+		#SIGNAL WIPPE_1_2, OFFSET: 6, LEN: 1, DESC: Top left key down, DATA TYPE BOOL
+		#SIGNAL WIPPE_1_1, OFFSET: 7, LEN: 1, DESC: Top left button up, DATA TYPE BOOL
+		#SIGNAL WIPPE_8_2, OFFSET: 8, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_8_1, OFFSET: 9, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_7_2, OFFSET: 10, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_7_1, OFFSET: 11, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_6_2, OFFSET: 12, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_6_1, OFFSET: 13, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_5_2, OFFSET: 14, LEN: 1, DESC: reserves, DATA TYPE BOOL
+		#SIGNAL WIPPE_5_1, OFFSET: 15, LEN: 1, DESC: reserves, DATA TYPE BOOL
 	FRAME MRM_A3 (0x00000296)
 		SIGNAL LS_ZUR_MRM, OFFSET: 0, LEN: 1, DESC: Steering column backwards (towards the driver), DATA TYPE BOOL
 		SIGNAL LS_VOR_MRM, OFFSET: 1, LEN: 1, DESC: Steering column forward, DATA TYPE BOOL

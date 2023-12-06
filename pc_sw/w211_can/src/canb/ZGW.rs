@@ -360,76 +360,76 @@ impl TryFrom<u8> for ZGW_A5_FCOD_MOT {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
 pub enum ZGW_A6_VER_JAHR {
-	Y_2000 = 0, // Unknown
-	Y_2001 = 1, // Unknown
-	Y_2002 = 2, // Unknown
-	Y_2003 = 3, // Unknown
-	Y_2004 = 4, // Unknown
-	Y_2005 = 5, // Unknown
-	Y_2006 = 6, // Unknown
-	Y_2007 = 7, // Unknown
-	Y_2008 = 8, // Unknown
-	Y_2009 = 9, // Unknown
-	Y_2010 = 10, // Unknown
-	Y_2011 = 11, // Unknown
-	Y_2012 = 12, // Unknown
-	Y_2013 = 13, // Unknown
-	Y_2014 = 14, // Unknown
-	Y_2015 = 15, // Unknown
-	Y_2016 = 16, // Unknown
-	Y_2017 = 17, // Unknown
-	Y_2018 = 18, // Unknown
-	Y_2019 = 19, // Unknown
-	Y_2020 = 20, // Unknown
-	Y_2021 = 21, // Unknown
-	Y_2022 = 22, // Unknown
-	Y_2023 = 23, // Unknown
-	Y_2024 = 24, // Unknown
-	Y_2025 = 25, // Unknown
-	Y_2026 = 26, // Unknown
-	Y_2027 = 27, // Unknown
-	Y_2028 = 28, // Unknown
-	Y_2029 = 29, // Unknown
-	Y_N_DEF = 30, // undefined
-	Y_SB = 31, // Start of series production
+	Y2000 = 0, // Unknown
+	Y2001 = 1, // Unknown
+	Y2002 = 2, // Unknown
+	Y2003 = 3, // Unknown
+	Y2004 = 4, // Unknown
+	Y2005 = 5, // Unknown
+	Y2006 = 6, // Unknown
+	Y2007 = 7, // Unknown
+	Y2008 = 8, // Unknown
+	Y2009 = 9, // Unknown
+	Y2010 = 10, // Unknown
+	Y2011 = 11, // Unknown
+	Y2012 = 12, // Unknown
+	Y2013 = 13, // Unknown
+	Y2014 = 14, // Unknown
+	Y2015 = 15, // Unknown
+	Y2016 = 16, // Unknown
+	Y2017 = 17, // Unknown
+	Y2018 = 18, // Unknown
+	Y2019 = 19, // Unknown
+	Y2020 = 20, // Unknown
+	Y2021 = 21, // Unknown
+	Y2022 = 22, // Unknown
+	Y2023 = 23, // Unknown
+	Y2024 = 24, // Unknown
+	Y2025 = 25, // Unknown
+	Y2026 = 26, // Unknown
+	Y2027 = 27, // Unknown
+	Y2028 = 28, // Unknown
+	Y2029 = 29, // Unknown
+	YN_DEF = 30, // undefined
+	SB = 31, // Start of series production
 }
 
 impl TryFrom<u8> for ZGW_A6_VER_JAHR {
 	type Error = ();
 	fn try_from(value: u8) -> Result<Self, Self::Error> {
 		match value {
-			0 => Ok(Self::Y_2000),
-			1 => Ok(Self::Y_2001),
-			2 => Ok(Self::Y_2002),
-			3 => Ok(Self::Y_2003),
-			4 => Ok(Self::Y_2004),
-			5 => Ok(Self::Y_2005),
-			6 => Ok(Self::Y_2006),
-			7 => Ok(Self::Y_2007),
-			8 => Ok(Self::Y_2008),
-			9 => Ok(Self::Y_2009),
-			10 => Ok(Self::Y_2010),
-			11 => Ok(Self::Y_2011),
-			12 => Ok(Self::Y_2012),
-			13 => Ok(Self::Y_2013),
-			14 => Ok(Self::Y_2014),
-			15 => Ok(Self::Y_2015),
-			16 => Ok(Self::Y_2016),
-			17 => Ok(Self::Y_2017),
-			18 => Ok(Self::Y_2018),
-			19 => Ok(Self::Y_2019),
-			20 => Ok(Self::Y_2020),
-			21 => Ok(Self::Y_2021),
-			22 => Ok(Self::Y_2022),
-			23 => Ok(Self::Y_2023),
-			24 => Ok(Self::Y_2024),
-			25 => Ok(Self::Y_2025),
-			26 => Ok(Self::Y_2026),
-			27 => Ok(Self::Y_2027),
-			28 => Ok(Self::Y_2028),
-			29 => Ok(Self::Y_2029),
-			30 => Ok(Self::Y_N_DEF),
-			31 => Ok(Self::Y_SB),
+			0 => Ok(Self::Y2000),
+			1 => Ok(Self::Y2001),
+			2 => Ok(Self::Y2002),
+			3 => Ok(Self::Y2003),
+			4 => Ok(Self::Y2004),
+			5 => Ok(Self::Y2005),
+			6 => Ok(Self::Y2006),
+			7 => Ok(Self::Y2007),
+			8 => Ok(Self::Y2008),
+			9 => Ok(Self::Y2009),
+			10 => Ok(Self::Y2010),
+			11 => Ok(Self::Y2011),
+			12 => Ok(Self::Y2012),
+			13 => Ok(Self::Y2013),
+			14 => Ok(Self::Y2014),
+			15 => Ok(Self::Y2015),
+			16 => Ok(Self::Y2016),
+			17 => Ok(Self::Y2017),
+			18 => Ok(Self::Y2018),
+			19 => Ok(Self::Y2019),
+			20 => Ok(Self::Y2020),
+			21 => Ok(Self::Y2021),
+			22 => Ok(Self::Y2022),
+			23 => Ok(Self::Y2023),
+			24 => Ok(Self::Y2024),
+			25 => Ok(Self::Y2025),
+			26 => Ok(Self::Y2026),
+			27 => Ok(Self::Y2027),
+			28 => Ok(Self::Y2028),
+			29 => Ok(Self::Y2029),
+			30 => Ok(Self::YN_DEF),
+			31 => Ok(Self::SB),
 			_ => Err(())
 		}
 	}
@@ -438,9 +438,9 @@ impl TryFrom<u8> for ZGW_A6_VER_JAHR {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
 pub enum ZGW_A6_VER_AE {
-	AE_1 = 0, // Unknown
-	AE_2 = 1, // Unknown
-	AE_3 = 2, // Unknown
+	V1 = 0, // Unknown
+	VX = 1, // Unknown
+	V2 = 2, // Unknown
 	SB = 3, // Start of series production
 }
 
@@ -448,9 +448,9 @@ impl TryFrom<u8> for ZGW_A6_VER_AE {
 	type Error = ();
 	fn try_from(value: u8) -> Result<Self, Self::Error> {
 		match value {
-			0 => Ok(Self::AE_1),
-			1 => Ok(Self::AE_2),
-			2 => Ok(Self::AE_3),
+			0 => Ok(Self::V1),
+			1 => Ok(Self::VX),
+			2 => Ok(Self::V2),
 			3 => Ok(Self::SB),
 			_ => Err(())
 		}
@@ -823,12 +823,14 @@ impl TryFrom<u8> for GW_C_B7_DRTGVR {
 	}
 }
 
-pub struct ZGW_A4(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ZGW_A4(pub u64);
 
 impl ZGW_A4 {
 
 	/// Gets CAN ID of ZGW_A4
-	pub fn get_canid() -> u16 { ZGW_A4_CAN_ID }
+	pub const fn get_canid() -> u16 { ZGW_A4_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets remaining distance in km [0], miles [1]
 
     pub fn set_RLS_KM_M(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -900,12 +902,14 @@ impl ZGW_A4 {
     pub fn get_REST_WEG(&self) -> u32 { (self.0 >> 0 & 0xffffff) as u32 }
         
 }
-pub struct ZGW_A5(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ZGW_A5(pub u64);
 
 impl ZGW_A5 {
 
 	/// Gets CAN ID of ZGW_A5
-	pub fn get_canid() -> u16 { ZGW_A5_CAN_ID }
+	pub const fn get_canid() -> u16 { ZGW_A5_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Country specific SA coding
 
     pub fn set_LAND(&mut self, value: ZGW_A5_LAND){ self.0 = (self.0 & 0x0fffffffffffffff) | ((value as u64) & 0xf) << 60; }
@@ -1180,12 +1184,14 @@ impl ZGW_A5 {
     pub fn get_WWSH_VH(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
         
 }
-pub struct ZGW_A6(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ZGW_A6(pub u64);
 
 impl ZGW_A6 {
 
 	/// Gets CAN ID of ZGW_A6
-	pub fn get_canid() -> u16 { ZGW_A6_CAN_ID }
+	pub const fn get_canid() -> u16 { ZGW_A6_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets year
 
     pub fn set_VER_JAHR(&mut self, value: ZGW_A6_VER_JAHR){ self.0 = (self.0 & 0x83ffffffffffffff) | ((value as u64) & 0x1f) << 58; }
@@ -1201,12 +1207,14 @@ impl ZGW_A6 {
     pub fn get_VER_AE(&self) -> std::result::Result<ZGW_A6_VER_AE, ()> { return ZGW_A6_VER_AE::try_from((self.0 >> 56 & 0x3) as u8) }
         
 }
-pub struct GW_C_B1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B1(pub u64);
 
 impl GW_C_B1 {
 
 	/// Gets CAN ID of GW_C_B1
-	pub fn get_canid() -> u16 { GW_C_B1_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Pulse ring counter, front left wheel (48 per revolution). Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: Impulse)
 
     pub fn set_RIZ_VL(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -1285,12 +1293,14 @@ impl GW_C_B1 {
     pub fn get_T_OEL(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
         
 }
-pub struct GW_C_B2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B2(pub u64);
 
 impl GW_C_B2 {
 
 	/// Gets CAN ID of GW_C_B2
-	pub fn get_canid() -> u16 { GW_C_B2_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets ART distance warning is on
 
     pub fn set_ART_ABW_AKT(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -1509,12 +1519,14 @@ impl GW_C_B2 {
     pub fn get_LL_STBL(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
         
 }
-pub struct GW_C_B3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B3(pub u64);
 
 impl GW_C_B3 {
 
 	/// Gets CAN ID of GW_C_B3
-	pub fn get_canid() -> u16 { GW_C_B3_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Transmission oil temperature. Conversion formula (To raw from real): y=(x+50.0)/1.00 (Unit: °C)
 
     pub fn set_T_GET(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -1565,12 +1577,14 @@ impl GW_C_B3 {
     pub fn get_HZL_ST(&self) -> std::result::Result<GW_C_B3_HZL_ST, ()> { return GW_C_B3_HZL_ST::try_from((self.0 >> 4 & 0x3) as u8) }
         
 }
-pub struct GW_C_B4(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B4(pub u64);
 
 impl GW_C_B4 {
 
 	/// Gets CAN ID of GW_C_B4
-	pub fn get_canid() -> u16 { GW_C_B4_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B4_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Presafe toggle bit
 
     pub fn set_PRESF_TGL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -1621,12 +1635,14 @@ impl GW_C_B4 {
     pub fn get_PRESF_L_SHD(&self) -> std::result::Result<GW_C_B4_PRESF_L_SHD, ()> { return GW_C_B4_PRESF_L_SHD::try_from((self.0 >> 48 & 0x3) as u8) }
         
 }
-pub struct GW_C_B5(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B5(pub u64);
 
 impl GW_C_B5 {
 
 	/// Gets CAN ID of GW_C_B5
-	pub fn get_canid() -> u16 { GW_C_B5_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B5_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Pulse ring counter, rear left wheel (48 per revolution). Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: Impulse)
 
     pub fn set_RIZ_HL(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
@@ -1677,12 +1693,14 @@ impl GW_C_B5 {
     pub fn get_FMMOTMAX(&self) -> u8 { (self.0 >> 8 & 0xff) as u8 }
         
 }
-pub struct GW_C_B7(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_C_B7(pub u64);
 
 impl GW_C_B7 {
 
 	/// Gets CAN ID of GW_C_B7
-	pub fn get_canid() -> u16 { GW_C_B7_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_C_B7_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Direction of rotation of wheel, front right
 
     pub fn set_DRTGVR(&mut self, value: GW_C_B7_DRTGVR){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
@@ -1698,12 +1716,14 @@ impl GW_C_B7 {
     pub fn get_DVR(&self) -> u16 { (self.0 >> 16 & 0x3fff) as u16 }
         
 }
-pub struct GW_D_B1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GW_D_B1(pub u64);
 
 impl GW_D_B1 {
 
 	/// Gets CAN ID of GW_D_B1
-	pub fn get_canid() -> u16 { GW_D_B1_CAN_ID }
+	pub const fn get_canid() -> u16 { GW_D_B1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Authorization status: [0] not authorized, [1] authorized
 
     pub fn set_AUT_STAT(&mut self, value: bool){ self.0 = (self.0 & 0xefffffffffffffff) | ((value as u64) & 0x1) << 60; }

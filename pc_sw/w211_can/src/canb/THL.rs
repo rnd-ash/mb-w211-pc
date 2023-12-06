@@ -13,12 +13,14 @@ pub const THL_A1_CAN_ID: u16 = 0x009A;
 pub const SD_RS_THL_CAN_ID: u16 = 0x07C9;
 
 
-pub struct THL_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct THL_A1(pub u64);
 
 impl THL_A1 {
 
 	/// Gets CAN ID of THL_A1
-	pub fn get_canid() -> u16 { THL_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { THL_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Standardized rear left window lifter
 
     pub fn set_FHL_NORM(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -41,12 +43,14 @@ impl THL_A1 {
     pub fn get_FESTE_HL(&self) -> u16 { (self.0 >> 48 & 0xfff) as u16 }
         
 }
-pub struct SD_RS_THL(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_THL(pub u64);
 
 impl SD_RS_THL {
 
 	/// Gets CAN ID of SD_RS_THL
-	pub fn get_canid() -> u16 { SD_RS_THL_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_THL_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_THL_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

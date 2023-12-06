@@ -1,112 +1,79 @@
-use std::{path::Path, time::Duration, thread, sync::{Arc, atomic::{AtomicU32, Ordering}}, io::{BufReader, Read, BufRead}};
+use std::{time::Duration, thread, sync::{Arc, atomic::{AtomicU32, Ordering}}, io::{Read, ErrorKind}, process::exit};
 
 use clap::Parser;
-use packed_struct::{prelude::{PrimitiveEnum_u8, PackedStruct}, PackedStructSlice};
 use serial_rs::SerialPortSettings;
 use serial_rs::*;
-use socketcan::{CanSocket, Socket, CanFrame, EmbeddedFrame, CanDataFrame, Id, StandardId};
+use w211_can::{canbus::CanBus, socketcan::{CanSocket, SocketOptions, Socket, CanDataFrame, EmbeddedFrame, CanFrame}, socketcan_isotp::{Id, StandardId}};
 
 #[derive(Debug, Clone, Parser)]
 pub struct AppSettings {
-    port: String,
     baud: u32
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
-#[derive(PrimitiveEnum_u8)]
-pub enum CanBus {
-    C = 67,
-    B = 66,
-    E = 69,
-}
-
-impl std::fmt::Display for CanBus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CanBus::C => f.write_str("Can_C"),
-            CanBus::B => f.write_str("Can_B"),
-            CanBus::E => f.write_str("Can_E"),
-        }
+pub fn can_frame_from_bytes(b: &[u8; 13]) -> Option<(CanBus, CanFrame)> {
+    // Easiest check is CRC first
+    let mut crc = 0xFFu8;
+    for i in 0..12u8 {
+        crc = crc.wrapping_sub(i);
+        crc = crc.wrapping_sub(b[i as usize]);
     }
-}
-
-impl CanBus {
-    pub fn get_iface_name(&self) -> &'static str {
-        match self {
-            CanBus::C => "vcan_c",
-            CanBus::B => "vcan_b",
-            CanBus::E => "vcan_e",
-        }
+    if crc != b[12] {
+        // CRC compare failed
+        return None;
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, PackedStruct)]
-#[packed_struct(bit_numbering="msb0")]
-pub struct PCCanFrame {
-    #[packed_field(bits="0..8",ty="enum")]
-    pub can_bus_tag: CanBus,
-    #[packed_field(endian = "lsb")]
-    pub can_id: u16,
-    pub dlc: u8,
-    pub data: [u8; 8],
-    pub crc: u8
-}
-
-fn from_can_to_pc_frame(f: &CanFrame, bus: CanBus) -> PCCanFrame {
-    let mut data: [u8; 8] = [0; 8];
-    for x in 0..f.dlc() {
-        data[x] = f.data()[x];
-    }
-
-    let id = if let Id::Standard(s) = f.id() {
-        s.as_raw()
-    } else {
-        0x7FF
+    let bus_tag = match b[0] {
+        67 => CanBus::C,
+        66 => CanBus::B,
+        69 => CanBus::E,
+        _ => return None
     };
-
-    PCCanFrame { 
-        can_bus_tag: bus, 
-        can_id: id, 
-        dlc: f.dlc() as u8, 
-        data,
-        crc: 0x00
+    let id = ((b[2] as u16) << 8) | b[1] as u16;
+    if id > 0x7FF {
+        return None;
     }
-}
-
-fn from_pc_to_can_frame(f: &PCCanFrame) -> CanFrame {
-    CanFrame::Data(
-        CanDataFrame::new(
-            Id::Standard(unsafe { StandardId::new_unchecked(f.can_id) }), 
-            &f.data[..f.dlc as usize]
-        ).unwrap()
+    let dlc = b[3];
+    if dlc > 8 {
+        return None;
+    }
+    // Can Frame OK!
+    Some((bus_tag,
+        CanFrame::Data(
+            CanDataFrame::new(
+                Id::Standard(unsafe { StandardId::new_unchecked(id) }),
+            &b[4..4+dlc as usize]
+            ).unwrap()
+        ))
     )
-}
 
-fn is_pc_frame_valid(cf: &PCCanFrame) -> bool {
-    let mut v = cf.pack().unwrap();
-    let mut crc: u8 = 0xFF;
-    for i in 0..12u8 {
-        crc = crc.wrapping_sub(i);
-        crc = crc.wrapping_sub(v[i as usize]);
+} 
+
+fn from_can_to_pc_frame(f: &CanFrame, bus: CanBus) -> Option<[u8; 13]> {
+    if let Id::Standard(std_id) = f.id() {
+        let mut ret = [0u8; 13];
+        let id = std_id.as_raw();
+        ret[0] = bus as u8;
+        ret[1] = (id & 0xFF) as u8;
+        ret[2] = ((id >> 8) & 0xFF) as u8;
+        ret[3] = f.dlc() as u8;
+        ret[4..4+f.dlc()].copy_from_slice(&f.data());
+
+        // Sign
+        let mut crc = 0xFFu8;
+        for i in 0..12u8 {
+            crc = crc.wrapping_sub(i);
+            crc = crc.wrapping_sub(ret[i as usize]);
+        }
+        ret[12] = crc;
+        Some(ret)
+    } else {
+        None
     }
-    v[12] == crc
 }
-
-fn sign_pc_can_frame(cf: PCCanFrame) -> [u8; 13] {
-    let mut v = cf.pack().unwrap();
-    let mut crc: u8 = 0xFF;
-    for i in 0..12u8 {
-        crc = crc.wrapping_sub(i);
-        crc = crc.wrapping_sub(v[i as usize]);
-    }
-    v[12] = crc;
-    v
-}
-
 
 fn make_can_channel(iface: CanBus) -> (Arc<CanSocket>, Arc<CanSocket>) {
-    let can = Arc::new(CanSocket::open(iface.get_iface_name()).unwrap());
+    let can = Arc::new(iface.create_can_socket());
     can.set_filter_accept_all().unwrap();
+    can.set_error_filter_drop_all().unwrap();
     can.set_nonblocking(true).unwrap();
     (can.clone(), can)
 }
@@ -116,13 +83,14 @@ pub const PID: u16 = 0x2175;
 
 #[allow(non_snake_case)]
 fn main() {
-    let mut settings = AppSettings::parse();
+    let settings = AppSettings::parse();
     println!("Waiting for port to be available");
+    let port_name: String;
     'search: loop {
         if let Ok(list) = serial_rs::list_ports() {
             for port in list {
                 if port.get_vid() == VID && port.get_pid() == PID {
-                    settings.port = port.get_port().to_string();
+                    port_name = port.get_port().to_string();
                     println!("Found {:04X}:{:04X} on {}", VID, PID, port.get_port());
                     break 'search;
                 }
@@ -138,20 +106,17 @@ fn main() {
 
     let port_settings = SerialPortSettings::default()
         .baud(settings.baud)
-        .read_timeout(Some(2000))
-        .write_timeout(Some(2000))
+        .read_timeout(Some(10000))
+        .write_timeout(None)
         .set_flow_control(FlowControl::RtsCts);
     
 
     let mut port = serial_rs::new_from_path(
-        &settings.port,
+        &port_name,
         Some(port_settings)
     ).unwrap();
 
-    port.clear_input_buffer().unwrap();
-    port.clear_output_buffer().unwrap();
     let mut port_clone = port.try_clone().unwrap();
-
     let error_counter = Arc::new(AtomicU32::new(0));
     let error_counter_writer = error_counter.clone();
 
@@ -159,55 +124,64 @@ fn main() {
 
     std::thread::spawn(move || {
         println!("Writer thread running");
+        port.clear_output_buffer().unwrap();
         while error_counter_writer.load(Ordering::Relaxed) < MAX_ERRORS {
             let mut data: Vec<u8> = Vec::new();
-            if let Ok(f) = CAN_B.read_frame() {
-                let f = from_can_to_pc_frame(&f, CanBus::B);
-                data.extend_from_slice(&sign_pc_can_frame(f));
+            while let Ok(f) = CAN_B.read_frame() {
+                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::B) {
+                    data.extend_from_slice(&cf);
+                }
             }
-            if let Ok(f) = CAN_C.read_frame() {
-                let f = from_can_to_pc_frame(&f, CanBus::C);
-                data.extend_from_slice(&sign_pc_can_frame(f));
+            while let Ok(f) = CAN_C.read_frame() {
+                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::C) {
+                    data.extend_from_slice(&cf);
+                }
             }
-            if let Ok(f) = CAN_E.read_frame() {
-                let f = from_can_to_pc_frame(&f, CanBus::E);
-                data.extend_from_slice(&sign_pc_can_frame(f));
+            while let Ok(f) = CAN_E.read_frame() {
+                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::E) {
+                    data.extend_from_slice(&cf);
+                }
             }
-            port.write(&data);
-            port.flush();
-            std::thread::sleep(std::time::Duration::from_millis(5));
+
+            if data.len() != 0 {
+                port.write(&data).unwrap();
+                port.flush().unwrap();
+            } else {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }     
         }
         eprintln!("Transmitter thread terminating");
     });
     let reader_thread = std::thread::spawn(move || {
         println!("Reader thread running");
+        port_clone.clear_input_buffer().unwrap();
         while error_counter.load(Ordering::Relaxed) < MAX_ERRORS {
             let mut buf: [u8; 13] = [0; 13];
-            if port_clone.read_exact(&mut buf).is_ok() {
-                match PCCanFrame::unpack_from_slice(&buf) {
-                    Ok(f) => {
-                        if is_pc_frame_valid(&f) {
-                            let cf = from_pc_to_can_frame(&f);
-                            match f.can_bus_tag {
-                                CanBus::C => CAN_C_R.write_frame(&cf).unwrap(),
-                                CanBus::B => CAN_B_R.write_frame(&cf).unwrap(),
-                                CanBus::E => CAN_E_R.write_frame(&cf).unwrap(),
+            match port_clone.read_exact(&mut buf) {
+                Ok(_) => {
+                    match can_frame_from_bytes(&buf) {
+                        Some((bus, frame)) => {
+                            match bus {
+                                CanBus::C => CAN_C_R.write_frame(&frame).unwrap(),
+                                CanBus::B => CAN_B_R.write_frame(&frame).unwrap(),
+                                CanBus::E => CAN_E_R.write_frame(&frame).unwrap(),
                             }
                             error_counter.store(0, Ordering::Relaxed);
-                        } else {
-                            eprintln!("Invalid CS. Frame was {:02X?}", f);
+                        },
+                        None => {
                             error_counter.fetch_add(1, Ordering::Relaxed);
+                            port_clone.clear_input_buffer().unwrap();
+                            eprintln!("Serialize error. buf was {:02X?}", buf);
                         }
-                    },
-                    _ => {
-                        error_counter.fetch_add(1, Ordering::Relaxed);
-                        port_clone.clear_input_buffer().unwrap();
-                        eprintln!("Serialize error. buf was {:02X?}", buf);
                     }
+                },
+                Err(e) => {
+                    if ErrorKind::BrokenPipe == e.kind() {
+                        exit(1); // Disconnected
+                    }
+                    println!("READ error {e:?}");
+                    error_counter.fetch_add(1, Ordering::Relaxed);
                 }
-            } else {
-                println!("READ error");
-                error_counter.fetch_add(1, Ordering::Relaxed);
             }
         }
         eprintln!("Receiver thread terminating");

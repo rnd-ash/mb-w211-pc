@@ -15,12 +15,14 @@ pub const TVR_A3_CAN_ID: u16 = 0x0019;
 pub const SD_RS_TVR_CAN_ID: u16 = 0x07CA;
 
 
-pub struct TVR_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVR_A1(pub u64);
 
 impl TVR_A1 {
 
 	/// Gets CAN ID of TVR_A1
-	pub fn get_canid() -> u16 { TVR_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { TVR_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Front Right Seat - Togglebit
 
     pub fn set_SVR_TGL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -239,12 +241,14 @@ impl TVR_A1 {
     pub fn get_SPI_LI_N_LI(&self) -> bool { (self.0 >> 24 & 0x1) != 0 }
         
 }
-pub struct TVR_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVR_A2(pub u64);
 
 impl TVR_A2 {
 
 	/// Gets CAN ID of TVR_A2
-	pub fn get_canid() -> u16 { TVR_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { TVR_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Open/close rear right window
 
     pub fn set_FHR_TVR(&mut self, value: bool){ self.0 = (self.0 & 0xff7fffffffffffff) | ((value as u64) & 0x1) << 55; }
@@ -379,12 +383,14 @@ impl TVR_A2 {
     pub fn get_FVL_AOE(&self) -> bool { (self.0 >> 32 & 0x1) != 0 }
         
 }
-pub struct TVR_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVR_A3(pub u64);
 
 impl TVR_A3 {
 
 	/// Gets CAN ID of TVR_A3
-	pub fn get_canid() -> u16 { TVR_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { TVR_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Mirror adjustment switch in left position
 
     pub fn set_SPVS_BF_RL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -442,12 +448,14 @@ impl TVR_A3 {
     pub fn get_FESTE_VR(&self) -> u16 { (self.0 >> 40 & 0xfff) as u16 }
         
 }
-pub struct SD_RS_TVR(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_TVR(pub u64);
 
 impl SD_RS_TVR {
 
 	/// Gets CAN ID of SD_RS_TVR
-	pub fn get_canid() -> u16 { SD_RS_TVR_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_TVR_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_TVR_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

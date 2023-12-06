@@ -9,5 +9,4 @@ edition = "2021"
 eframe = "0.21.3"
 egui_extras = "0.21.0"
 socketcan = "2.0.0"
-soloud = "1.0.2"
 w211_can = { path="../w211_can" }

@@ -13,12 +13,14 @@ pub const AAG_A1_CAN_ID: u16 = 0x0130;
 pub const SD_RS_AAG_CAN_ID: u16 = 0x07D0;
 
 
-pub struct AAG_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct AAG_A1(pub u64);
 
 impl AAG_A1 {
 
 	/// Gets CAN ID of AAG_A1
-	pub fn get_canid() -> u16 { AAG_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { AAG_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Trailer operation detected
 
     pub fn set_ANH_ERK(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -83,12 +85,14 @@ impl AAG_A1 {
     pub fn get_ANHBLI_DEF_R(&self) -> bool { (self.0 >> 50 & 0x1) != 0 }
         
 }
-pub struct SD_RS_AAG(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_AAG(pub u64);
 
 impl SD_RS_AAG {
 
 	/// Gets CAN ID of SD_RS_AAG
-	pub fn get_canid() -> u16 { SD_RS_AAG_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_AAG_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_AAG_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

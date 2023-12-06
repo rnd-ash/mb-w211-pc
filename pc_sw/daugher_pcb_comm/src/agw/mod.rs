@@ -1,79 +1,27 @@
 use std::{
-    sync::{mpsc::{self, Sender}, atomic::Ordering},
+    sync::{mpsc::{self, Sender}, atomic::Ordering, RwLock, Arc},
     time::{Instant, Duration, SystemTime},
-    vec,
+    vec, thread::JoinHandle, borrow::BorrowMut,
 };
 
-use crate::{w211can::{CanBus}};
-use bitflags::bitflags;
-use chrono::{Datelike, Timelike};
-
-use self::{bluetooth_manager::{BluetoothManager, BtCommand}, keys::WheelKeyManager, navigation::{NaviHeading, NaviPage, NaviPageCmd}, amplifier_controler::AudioControl};
+use self::{bluetooth_manager::{BluetoothManager, BtCommand}, navigation::{NaviHeading, NaviPage, NaviPageCmd}, audio_control::AudioManager, keys::{WheelKeyManager, W213WheelKey}};
 
 mod bluetooth_manager;
 mod keys;
 mod pages;
-mod amplifier_controler;
+mod audio_control;
 
-use crate::agw::audio::{AudioPage, AudioPageCmd, AudioPageState, AudioSymbol};
+use crate::{agw::audio::{AudioPage, AudioPageCmd, AudioPageState, AudioSymbol}, custom_display_format::CDMIsoTp};
 use crate::agw::keys::KombiPage;
 pub use pages::*;
+use w211_can::{canbus::CanBus, socketcan_isotp::IsoTpSocket};
+pub mod char_map;
 
-static mut volume: i32 = 10000;
-const MAX_VOLUME: i32 = 40000;
-
-static mut sink_name: Option<String> = None;
-
-fn get_volume() -> i32 {
-    unsafe {volume}
-}
-
-fn get_sink() -> Option<String> {
-    if let Some(name) = unsafe { &sink_name } {
-        Some(name.clone())
-    } else {
-        if let Ok(s) = std::process::Command::new("pactl").args(["get-default-sink"]).output().map(|x| x.stdout) {
-            let str = match String::from_utf8(s) {
-                Ok(s) => { 
-                    s[..s.len()-1].to_string()
-                }
-                Err(e) => return None
-            };
-            if str.contains("USB_Sound_Device") {
-                unsafe { sink_name = Some(str.clone()) }
-            }
-        }
-        unsafe { sink_name.clone() } 
-    }
-}
-
-fn set_volume(d: i32) {
-    if let Some(s_name) = get_sink() {
-        let mut start = get_volume();
-        let mut end = start + d;
-        log::debug!("Setting volume from {} to {}. Sink is '{:?}'", start, end, s_name);
-        if end < 0 {
-            end = 0;
-        } else if end > MAX_VOLUME {
-            end = MAX_VOLUME;
-        }
-        if start == end {
-            return;
-        }
-        unsafe { volume = end }
-        std::process::Command::new("pactl")
-            .args([
-                "set-sink-volume",
-                &format!("{}", s_name),
-                &format!("{}", end),
-            ])
-            .output();
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AgwCommand {
     Wakeup,
+    TrackUpdate(String),
     SetAudioPage(AudioPageState),
     SetAudioBodyText(IcText),
     SetAudioHeaderText(IcText),
@@ -96,20 +44,21 @@ pub struct AgwEmulator {
     /// Bluetooth manager
     bluetooth_handler: BluetoothManager,
     /// Wheel key (MRM) input layer
-    key_manager: WheelKeyManager,
-    sender: Sender<AgwCommand>
+    //key_manager: WheelKeyManager,
+    sender: Sender<AgwCommand>,
 }
 
 
 impl AgwEmulator {
-    pub fn new() -> Self {
-        // quickly set volume
-        AudioControl::new();
-
-        let mut endpoint = CanBus::B.create_iso_tp_socket(0x01A4, 0x01D0, 0, 0x28).unwrap();
+    pub fn new(can_name: String, vlad: CDMIsoTp) -> Self {
+        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 50, 0);
         endpoint.set_nonblocking(true);
         let (sender, receiver) = mpsc::channel::<AgwCommand>();
         let (tx_isotp, rx_isotp) = mpsc::sync_channel::<Vec<u8>>(10);
+        let current_page = Arc::new(RwLock::new(KombiPage::Other));
+        let current_page_c = current_page.clone();
+        let mut handler : Option<JoinHandle<CDMIsoTp>> = None;
+        let mut vlad_handler = Some(vlad);
         // Alert IC that AGW has woken up
         std::thread::spawn(move || {
             let audio_page = AudioPage::new();
@@ -119,6 +68,15 @@ impl AgwEmulator {
             let mut last_time_send_time = Instant::now();
             let mut ic_awake = false;
             loop {
+                let mut join = false;
+                if let Some(h) = handler.borrow_mut() {
+                    if h.is_finished() {
+                        join = true;
+                    }
+                }
+                if join {
+                    vlad_handler = Some(handler.take().unwrap().join().unwrap())
+                }
                 /*
                 if last_time_send_time.elapsed().as_millis() > 250 {
                     last_time_send_time = Instant::now();
@@ -216,6 +174,19 @@ impl AgwEmulator {
                         AgwCommand::SetNaviCompassHeading(nch) => {
                             n_cmd.send(NaviPageCmd::CompassHeading(nch));
                         }
+                        AgwCommand::TrackUpdate(name) => {
+                            if *current_page.read().unwrap() != KombiPage::Audio {
+                                if let Some(mut v) = vlad_handler.take() {
+                                    handler = Some(
+                                        std::thread::spawn(move|| {
+                                            v.notify_track_change(&name);
+                                            v
+                                        })
+                                    )
+                                    
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -224,80 +195,62 @@ impl AgwEmulator {
         });
         let bt = BluetoothManager::new(sender.clone());
         let bt_c = bt.clone();
-        let key_manager = WheelKeyManager::new();
-        let key_manager_c = key_manager.clone();
+        let key_manager = WheelKeyManager::new(can_name.clone());
+        //let key_manager_c = key_manager.clone();
         let mut t_plus = Instant::now();
         let mut t_minus = Instant::now();
+
+
+        let mixer_data : Arc<RwLock<(f32,f32,f32,f32)>> = Arc::new(RwLock::new((1.0, 1.0, 1.0, 1.0)));
+        let mixer_data_c = mixer_data.clone();
+
         std::thread::spawn(move|| {
-            let mut up = false;
-            let mut down = false;
-            let mut minus = false;
-            let mut plus = false;
-            let mut answer = false;
-            let mut decline = false;
+            let mut mgr = AudioManager::new();
             let mut v_inc = 500;
+            let mut muted = false;
             loop {
-                let up_now = key_manager_c.up();
-                let down_now = key_manager_c.down();
-                let minus_now = key_manager_c.minus();
-                let plus_now = key_manager_c.plus();
-                let answer_now = key_manager_c.answer();
-                let decline_now = key_manager_c.decline();
-                let page = key_manager_c.current_page();
-                if plus_now && !plus {
-                    t_plus = Instant::now();
-                }
-                if minus_now && !minus {
-                    t_minus = Instant::now();
-                }
-
-                if plus_now && plus && t_plus.elapsed().as_millis() > 500 {
-                    set_volume(200);
-                }
-                if minus_now && minus && t_minus.elapsed().as_millis() > 500 {
-                    set_volume(-200);
-                } 
-                if plus && !plus_now && t_plus.elapsed().as_millis() < 500 { // Key release
-                    if (get_volume() > 15000) {
-                        set_volume(v_inc);
-                    } else {
-                        set_volume(v_inc);
+                let page = key_manager.current_page();
+                *current_page_c.write().unwrap() = page;
+                if let Some(key) = key_manager.event() {
+                    match key {
+                        W213WheelKey::VolUp => {
+                            muted = false;
+                            mgr.offset_volume(0.005);
+                        },
+                        W213WheelKey::VolDown => {
+                            muted = false;
+                            mgr.offset_volume(-0.005);
+                        },
+                        W213WheelKey::Mute => {
+                            muted = !muted;
+                            mgr.set_mute(muted);
+                        },
+                        W213WheelKey::UpSwipe => {
+                            if page == KombiPage::Audio {
+                                bt_c.send_media_control(BtCommand::Next);
+                            }
+                        },
+                        W213WheelKey::DownSwipe => {
+                            if page == KombiPage::Audio {
+                                bt_c.send_media_control(BtCommand::Prev);
+                            }
+                        },
+                        W213WheelKey::DistronicPlus(1) => {
+                            bt_c.send_media_control(BtCommand::Next);
+                        },
+                        W213WheelKey::DistronicMinus(1) => {
+                            bt_c.send_media_control(BtCommand::Prev);
+                        },
+                        _ => {}
                     }
-                    v_inc += 50;
-                } else if minus && !minus_now  && t_minus.elapsed().as_millis() < 500 { // Key release
-                    if (get_volume() > 15000) {
-                        set_volume(-v_inc);
-                    } else {
-                        set_volume(-v_inc);
-                    }
-                    v_inc += 50;
-                } else {
-                    v_inc = 500;
                 }
-                if page == KombiPage::Audio {
-                    if up && !up_now { // Key release
-                        bt_c.send_media_control(BtCommand::Next);
-                    } else if down && !down_now {
-                        bt_c.send_media_control(BtCommand::Prev);
-                    } 
-                }
-
-                // Set vars
-                up = up_now;
-                down = down_now;
-                plus = plus_now;
-                minus = minus_now;
-                answer = answer_now;
-                decline = decline_now;
-
-
-                std::thread::sleep(std::time::Duration::from_millis(40));
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
         });
 
         Self {
             bluetooth_handler: bt,
-            key_manager,
+            //key_manager,
             sender
         }
     }

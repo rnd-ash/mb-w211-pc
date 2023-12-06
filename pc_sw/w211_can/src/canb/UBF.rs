@@ -35,12 +35,14 @@ impl TryFrom<u8> for UBF_A1_ART_ABW_BET {
 	}
 }
 
-pub struct UBF_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct UBF_A1(pub u64);
 
 impl UBF_A1 {
 
 	/// Gets CAN ID of UBF_A1
-	pub fn get_canid() -> u16 { UBF_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { UBF_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets ART distance warning on/off actuated
 
     pub fn set_ART_ABW_BET(&mut self, value: UBF_A1_ART_ABW_BET){ self.0 = (self.0 & 0xcfffffffffffffff) | ((value as u64) & 0x3) << 60; }
@@ -105,12 +107,14 @@ impl UBF_A1 {
     pub fn get_LED_STH_DEF(&self) -> bool { (self.0 >> 37 & 0x1) != 0 }
         
 }
-pub struct SD_RS_UBF(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_UBF(pub u64);
 
 impl SD_RS_UBF {
 
 	/// Gets CAN ID of SD_RS_UBF
-	pub fn get_canid() -> u16 { SD_RS_UBF_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_UBF_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_UBF_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

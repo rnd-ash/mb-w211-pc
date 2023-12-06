@@ -35,12 +35,14 @@ impl TryFrom<u8> for PFDS_A1_PFDSMOT_ST {
 	}
 }
 
-pub struct PFDS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PFDS_A1(pub u64);
 
 impl PFDS_A1 {
 
 	/// Gets CAN ID of PFDS_A1
-	pub fn get_canid() -> u16 { PFDS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { PFDS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets FDS pump deactivated
 
     pub fn set_PFDS_DEAKT(&mut self, value: bool){ self.0 = (self.0 & 0xefffffffffffffff) | ((value as u64) & 0x1) << 60; }
@@ -77,12 +79,14 @@ impl PFDS_A1 {
     pub fn get_P_PFDS(&self) -> u8 { (self.0 >> 48 & 0x1f) as u8 }
         
 }
-pub struct SD_RS_PFDS(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_PFDS(pub u64);
 
 impl SD_RS_PFDS {
 
 	/// Gets CAN ID of SD_RS_PFDS
-	pub fn get_canid() -> u16 { SD_RS_PFDS_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_PFDS_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_PFDS_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

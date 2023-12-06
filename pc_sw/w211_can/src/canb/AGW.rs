@@ -272,12 +272,14 @@ impl TryFrom<u8> for IPS_A1_IPS_ATTRIBUTE {
 	}
 }
 
-pub struct AGW_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct AGW_A1(pub u64);
 
 impl AGW_A1 {
 
 	/// Gets CAN ID of AGW_A1
-	pub fn get_canid() -> u16 { AGW_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { AGW_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets HU cannot issue a release for opening
 
     pub fn set_WARN_SL_HU(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -328,12 +330,14 @@ impl AGW_A1 {
     pub fn get_SBS_AKT(&self) -> bool { (self.0 >> 55 & 0x1) != 0 }
         
 }
-pub struct AGW_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct AGW_A3(pub u64);
 
 impl AGW_A3 {
 
 	/// Gets CAN ID of AGW_A3
-	pub fn get_canid() -> u16 { AGW_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { AGW_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Refusal to enter digits HU
 
     pub fn set_CANCEL_HU(&mut self, value: bool){ self.0 = (self.0 & 0xbfffffffffffffff) | ((value as u64) & 0x1) << 62; }
@@ -377,12 +381,14 @@ impl AGW_A3 {
     pub fn get_AKT_SYS(&self) -> std::result::Result<AGW_A3_AKT_SYS, ()> { return AGW_A3_AKT_SYS::try_from((self.0 >> 48 & 0x7) as u8) }
         
 }
-pub struct GPS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GPS_A1(pub u64);
 
 impl GPS_A1 {
 
 	/// Gets CAN ID of GPS_A1
-	pub fn get_canid() -> u16 { GPS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { GPS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets GPS Latitude (+=North). Conversion formula (To raw from real): y=(x+648000000.0)/0.30 (Unit: ms)
 
     pub fn set_LATITUDE(&mut self, value: u32){ self.0 = (self.0 & 0x00000000ffffffff) | ((value as u64) & 0xffffffff) << 32; }
@@ -398,12 +404,14 @@ impl GPS_A1 {
     pub fn get_LONGITUDE(&self) -> u32 { (self.0 >> 0 & 0xffffffff) as u32 }
         
 }
-pub struct GPS_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GPS_A2(pub u64);
 
 impl GPS_A2 {
 
 	/// Gets CAN ID of GPS_A2
-	pub fn get_canid() -> u16 { GPS_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { GPS_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets UTC years. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: years)
 
     pub fn set_UTC_YEARS(&mut self, value: u16){ self.0 = (self.0 & 0x0000ffffffffffff) | ((value as u64) & 0xffff) << 48; }
@@ -447,12 +455,14 @@ impl GPS_A2 {
     pub fn get_UTC_SECONDS(&self) -> u16 { (self.0 >> 0 & 0xffff) as u16 }
         
 }
-pub struct GPS_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GPS_A3(pub u64);
 
 impl GPS_A3 {
 
 	/// Gets CAN ID of GPS_A3
-	pub fn get_canid() -> u16 { GPS_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { GPS_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets GPS speed. Conversion formula (To raw from real): y=(x+32768.0)/1.00 (Unit: cm/s)
 
     pub fn set_GPS_SPEED(&mut self, value: u16){ self.0 = (self.0 & 0x0000ffffffffffff) | ((value as u64) & 0xffff) << 48; }
@@ -545,12 +555,14 @@ impl GPS_A3 {
     pub fn get_H_DOP(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
         
 }
-pub struct IPS_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct IPS_A1(pub u64);
 
 impl IPS_A1 {
 
 	/// Gets CAN ID of IPS_A1
-	pub fn get_canid() -> u16 { IPS_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { IPS_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets IPS Update Acknowledgment
 
     pub fn set_IPS_UPD_ACK(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -594,12 +606,14 @@ impl IPS_A1 {
     pub fn get_IPS_ATTRIBUTE(&self) -> std::result::Result<IPS_A1_IPS_ATTRIBUTE, ()> { return IPS_A1_IPS_ATTRIBUTE::try_from((self.0 >> 40 & 0xf) as u8) }
         
 }
-pub struct SD_RS_AGW(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_AGW(pub u64);
 
 impl SD_RS_AGW {
 
 	/// Gets CAN ID of SD_RS_AGW
-	pub fn get_canid() -> u16 { SD_RS_AGW_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_AGW_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_AGW_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

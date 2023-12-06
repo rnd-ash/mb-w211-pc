@@ -15,12 +15,14 @@ pub const TVL_A3_CAN_ID: u16 = 0x0018;
 pub const SD_RS_TVL_CAN_ID: u16 = 0x07C8;
 
 
-pub struct TVL_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVL_A1(pub u64);
 
 impl TVL_A1 {
 
 	/// Gets CAN ID of TVL_A1
-	pub fn get_canid() -> u16 { TVL_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { TVL_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Front Left Seat - Togglebit
 
     pub fn set_SVL_TGL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -239,12 +241,14 @@ impl TVL_A1 {
     pub fn get_SPI_RE_N_LI(&self) -> bool { (self.0 >> 24 & 0x1) != 0 }
         
 }
-pub struct TVL_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVL_A2(pub u64);
 
 impl TVL_A2 {
 
 	/// Gets CAN ID of TVL_A2
-	pub fn get_canid() -> u16 { TVL_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { TVL_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Open/close rear right window
 
     pub fn set_FHR_TVL(&mut self, value: bool){ self.0 = (self.0 & 0xff7fffffffffffff) | ((value as u64) & 0x1) << 55; }
@@ -379,12 +383,14 @@ impl TVL_A2 {
     pub fn get_FVR_AOE(&self) -> bool { (self.0 >> 36 & 0x1) != 0 }
         
 }
-pub struct TVL_A3(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TVL_A3(pub u64);
 
 impl TVL_A3 {
 
 	/// Gets CAN ID of TVL_A3
-	pub fn get_canid() -> u16 { TVL_A3_CAN_ID }
+	pub const fn get_canid() -> u16 { TVL_A3_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Mirror adjustment switch in the right position
 
     pub fn set_SPVS_BF_LL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -442,12 +448,14 @@ impl TVL_A3 {
     pub fn get_FESTE_VL(&self) -> u16 { (self.0 >> 40 & 0xfff) as u16 }
         
 }
-pub struct SD_RS_TVL(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_TVL(pub u64);
 
 impl SD_RS_TVL {
 
 	/// Gets CAN ID of SD_RS_TVL
-	pub fn get_canid() -> u16 { SD_RS_TVL_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_TVL_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_TVL_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }

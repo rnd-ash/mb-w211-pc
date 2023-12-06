@@ -45,12 +45,14 @@ impl TryFrom<u8> for DBE_A1_SHD_ST {
 	}
 }
 
-pub struct DBE_A1(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DBE_A1(pub u64);
 
 impl DBE_A1 {
 
 	/// Gets CAN ID of DBE_A1
-	pub fn get_canid() -> u16 { DBE_A1_CAN_ID }
+	pub const fn get_canid() -> u16 { DBE_A1_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Turn on the front left exit light
 
     pub fn set_AL_VL(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -241,12 +243,14 @@ impl DBE_A1 {
     pub fn get_FRBL_HELL(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
         
 }
-pub struct DBE_A2(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DBE_A2(pub u64);
 
 impl DBE_A2 {
 
 	/// Gets CAN ID of DBE_A2
-	pub fn get_canid() -> u16 { DBE_A2_CAN_ID }
+	pub const fn get_canid() -> u16 { DBE_A2_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Byte identifier rain sensor
 
     pub fn set_KENN_RS(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -304,12 +308,14 @@ impl DBE_A2 {
     pub fn get_DIAG_RLS_EIN(&self) -> bool { (self.0 >> 48 & 0x1) != 0 }
         
 }
-pub struct DBE_A4(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DBE_A4(pub u64);
 
 impl DBE_A4 {
 
 	/// Gets CAN ID of DBE_A4
-	pub fn get_canid() -> u16 { DBE_A4_CAN_ID }
+	pub const fn get_canid() -> u16 { DBE_A4_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Sunroof closed when it rains
 
     pub fn set_SHD_ZU_RS(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
@@ -325,12 +331,14 @@ impl DBE_A4 {
     pub fn get_ISP_BET(&self) -> bool { (self.0 >> 62 & 0x1) != 0 }
         
 }
-pub struct SD_RS_DBE(u64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SD_RS_DBE(pub u64);
 
 impl SD_RS_DBE {
 
 	/// Gets CAN ID of SD_RS_DBE
-	pub fn get_canid() -> u16 { SD_RS_DBE_CAN_ID }
+	pub const fn get_canid() -> u16 { SD_RS_DBE_CAN_ID }
+	pub fn new(data: u64) -> Self { Self(data) }
     /// Sets Identification for > 8 bytes
 
     pub fn set_DBE_KENN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
