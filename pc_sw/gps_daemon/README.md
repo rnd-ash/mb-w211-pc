@@ -1,7 +1,3 @@
-# PC Comm software over socketcan
+# Under construction
 
-## Interfaces spun up
-
-* `vcan_b` - CAN network representing interior CAN network
-* `vcan_c` - CAN network representing Engine CAN network
-* `vcan_e` - CAN network for the PC and MCU to exchange messages to one another
+GPS Daemon for W211 using a USB GPS Modem, send location data over CAN to the rest of the car.
