@@ -2,23 +2,62 @@ use std::{time::Instant, num::Wrapping};
 
 use super::{AgwPageFsm, build_agw_packet_checksum_in_place};
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DistanceUnit{
+    Km = 0,
+    M = 2,
+    Mi = 4,
+    Ft = 6
+}
+
+impl Default for DistanceUnit {
+    fn default() -> Self {
+        Self::M
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct DistanceDisplay {
+    pub show_bar: bool,
+    pub show_text: bool,
+    pub unit: DistanceUnit,
+    pub distance: u16,
+    pub bar_fill: u8
+}
+
+impl DistanceDisplay {
+    pub fn into_buffer(&self) -> [u8; 5] {
+        let mut res = [0; 5];
+        
+        res[0] |= (self.show_bar as u8) & 0b1;
+        res[0] |= ((self.show_text as u8) & 0b1) << 1;
+        res[0] |= ((self.unit as u8) & 0b111) << 2;
+        
+        res[2..4].copy_from_slice(&self.distance.to_be_bytes());
+        res[4] = self.bar_fill;
+        res
+    }
+}
+
 pub struct NaviPage {
-    last_rotate: Instant
+    last_rotate: Instant,
 }
 
 impl NaviPage {
     pub fn new() -> Self {
         Self {
-            last_rotate: Instant::now()
+            last_rotate: Instant::now(),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct NaviPageState {
-    pub (crate) current_road: String,
-    pub (crate) next_road: String,
-    pub (crate) meta: Vec<u8>,
+    pub current_road: String,
+    pub next_road: String,
+    pub meta: Vec<u8>,
+    pub distance_display_info: DistanceDisplay
 }
 
 impl Default for NaviPageState {
@@ -26,17 +65,18 @@ impl Default for NaviPageState {
         Self { 
             current_road: "".into(), 
             next_road: "RAND_ASH".into(), 
-            //
-            meta: vec![0x17, 0x00, 0x00, 0xCC, 0xCC, 0x01, 0x00, 0x03]
+            distance_display_info: DistanceDisplay::default(),
+            meta: vec![0x00, 0x00, 0x13]
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum NaviPageCmd {
     CurrentRoad(String),
     TargetRoad(String),
     CompassHeading(NaviHeading),
+    DistanceData(DistanceDisplay),
 }
 
 impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
@@ -61,9 +101,14 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
         buf.extend_from_slice(state.current_road.as_bytes());
         buf.push(0x00);
         // Symbol data
-        buf.push(2 + state.meta.len() as u8);
+
+        let mut meta_array = vec![];
+        meta_array.extend_from_slice(&state.distance_display_info.into_buffer());
+        meta_array.extend_from_slice(&state.meta);
+
+        buf.push(2 + meta_array.len() as u8);
         buf.push(0x80);
-        buf.extend_from_slice(&state.meta);
+        buf.extend_from_slice(&meta_array);
         buf.push(0x00);
         build_agw_packet_checksum_in_place(buf)
     }
@@ -77,22 +122,7 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
     }
 
     fn on_page_idle(&mut self, state: &mut NaviPageState) -> Option<Vec<u8>> {
-        if self.last_rotate.elapsed().as_millis() > 2000 {
-            self.last_rotate = Instant::now();
-            state.meta[3].wrapping_add(0x10);
-            state.meta[4].wrapping_add(0x10);
-            Some(self.build_pkg_26(state))
-        } else {
-        //    self.last_rotate = Instant::now();
-        //    let b = state.meta[6].wrapping_add(0x10);
-        //    state.meta[6] = b;
-        //    state.meta[3] = b;
-        //    state.meta[4] = 0xFF-b;
-        //    state.next_road = format!("B[6] = 0x{:02X?}", b);
-        //    Some(self.build_pkg_26(state))
-        //} else {
-            None
-        }
+        None
 
     }
 
@@ -108,6 +138,9 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
             },
             NaviPageCmd::CompassHeading(_ch) => {
 
+            },
+            NaviPageCmd::DistanceData(d) => {
+                mod_state.distance_display_info = d;
             },
         }
 

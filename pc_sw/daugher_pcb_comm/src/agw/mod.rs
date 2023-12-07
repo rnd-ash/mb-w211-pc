@@ -26,9 +26,7 @@ pub enum AgwCommand {
     SetAudioBodyText(IcText),
     SetAudioHeaderText(IcText),
     SetAudioSymbols(AudioSymbol, AudioSymbol),
-    SetNaviCurrentRoad(String),
-    SetNaviTargetRoad(String),
-    SetNaviCompassHeading(NaviHeading),
+    SendNaviData(NaviPageCmd)
 }
 
 /// Audio gateway emulator master
@@ -165,14 +163,8 @@ impl AgwEmulator {
                         AgwCommand::SetAudioSymbols(u, d) => {
                             a_cmd.send(AudioPageCmd::SetIcons(u, d));
                         }
-                        AgwCommand::SetNaviCurrentRoad(cr) => {
-                            n_cmd.send(NaviPageCmd::CurrentRoad(cr));
-                        }
-                        AgwCommand::SetNaviTargetRoad(tr) => {
-                            n_cmd.send(NaviPageCmd::CurrentRoad(tr));
-                        }
-                        AgwCommand::SetNaviCompassHeading(nch) => {
-                            n_cmd.send(NaviPageCmd::CompassHeading(nch));
+                        AgwCommand::SendNaviData(cr) => {
+                            n_cmd.send(cr);
                         }
                         AgwCommand::TrackUpdate(name) => {
                             if *current_page.read().unwrap() != KombiPage::Audio {
