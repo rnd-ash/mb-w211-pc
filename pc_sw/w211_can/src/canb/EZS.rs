@@ -203,7 +203,7 @@ impl EZS_A1 {
     pub fn set_SPEI_NR(&mut self, value: EZS_A1_SPEI_NR){ self.0 = (self.0 & 0xfffff8ffffffffff) | ((value as u64) & 0x7) << 40; }
 
     /// Gets Current memory block number
-    pub fn get_SPEI_NR(&self) -> std::result::Result<EZS_A1_SPEI_NR, ()> { return EZS_A1_SPEI_NR::try_from((self.0 >> 40 & 0x7) as u8) }
+    pub fn get_SPEI_NR(&self) -> Option<EZS_A1_SPEI_NR> {  EZS_A1_SPEI_NR::try_from((self.0 >> 40 & 0x7) as u8).ok() }
         
     /// Sets external security
 
@@ -359,7 +359,7 @@ impl EZS_A12 {
     pub fn set_MOB_STAT(&mut self, value: EZS_A12_MOB_STAT){ self.0 = (self.0 & 0x1fffffffffffffff) | ((value as u64) & 0x7) << 61; }
 
     /// Gets Mobility account status
-    pub fn get_MOB_STAT(&self) -> std::result::Result<EZS_A12_MOB_STAT, ()> { return EZS_A12_MOB_STAT::try_from((self.0 >> 61 & 0x7) as u8) }
+    pub fn get_MOB_STAT(&self) -> Option<EZS_A12_MOB_STAT> {  EZS_A12_MOB_STAT::try_from((self.0 >> 61 & 0x7) as u8).ok() }
         
     /// Sets Mobility account activated
 

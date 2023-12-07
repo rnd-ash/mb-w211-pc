@@ -87,6 +87,6 @@ impl EWM_230 {
     pub fn set_WHC(&mut self, value: EWM_230h_WHC){ self.0 = (self.0 & 0xf0ffffffffffffff) | ((value as u64) & 0xf) << 56; }
 
     /// Gets Gear selector lever position (NAG only)
-    pub fn get_WHC(&self) -> std::result::Result<EWM_230h_WHC, ()> { return EWM_230h_WHC::try_from((self.0 >> 56 & 0xf) as u8) }
+    pub fn get_WHC(&self) -> Option<EWM_230h_WHC> {  EWM_230h_WHC::try_from((self.0 >> 56 & 0xf) as u8).ok() }
         
 }

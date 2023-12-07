@@ -616,9 +616,9 @@ impl SD_RS_SF {
         
     /// Sets Process variable 38h
 
-    pub fn set_SF_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_SF_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Process variable 38h
-    pub fn get_SF_PG38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_SF_PG38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

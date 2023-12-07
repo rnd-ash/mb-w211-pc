@@ -277,10 +277,10 @@ impl MSS_A3 {
         
     /// Sets GPS Longitude, West = [-]; East = [+]. Conversion formula (To raw from real): y=(x+648000000.0)/0.30 (Unit: ms)
 
-    pub fn set_DEST_LONG(&mut self, value: u32){ self.0 = (self.0 & 0xffffffff00000000) | ((value as u64) & 0xffffffff) << 0; }
+    pub fn set_DEST_LONG(&mut self, value: u32){ self.0 = (self.0 & 0xffffffff00000000) | ((value as u64) & 0xffffffff); }
 
     /// Gets GPS Longitude, West = [-]; East = [+]. Conversion formula (To real from raw): y=(0.30x)-648000000.0 (Unit: ms)
-    pub fn get_DEST_LONG(&self) -> u32 { (self.0 >> 0 & 0xffffffff) as u32 }
+    pub fn get_DEST_LONG(&self) -> u32 { (self.0 & 0xffffffff) as u32 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -978,9 +978,9 @@ impl SD_RS_MSS {
         
     /// Sets error vector 38h
 
-    pub fn set_MSS_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_MSS_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets error vector 38h
-    pub fn get_MSS_FV38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_MSS_FV38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

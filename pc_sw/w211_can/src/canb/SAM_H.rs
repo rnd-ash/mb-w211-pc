@@ -377,10 +377,10 @@ impl SAM_H_A1 {
         
     /// Sets Turn on the left reversing light
 
-    pub fn set_RFL_L_EIN(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_RFL_L_EIN(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Turn on the left reversing light
-    pub fn get_RFL_L_EIN(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_RFL_L_EIN(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -646,9 +646,9 @@ impl SD_RS_SAM_H {
         
     /// Sets state variable 08h
 
-    pub fn set_SAM_H_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_SAM_H_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 08h
-    pub fn get_SAM_H_PGV08(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_SAM_H_PGV08(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

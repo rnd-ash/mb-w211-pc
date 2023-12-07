@@ -502,14 +502,14 @@ impl RDU_A1 {
     pub fn set_DIAGMODE(&mut self, value: RDU_A1_DIAGMODE){ self.0 = (self.0 & 0xffffffffffffff3f) | ((value as u64) & 0x3) << 6; }
 
     /// Gets Linear controller diagnosis mode
-    pub fn get_DIAGMODE(&self) -> std::result::Result<RDU_A1_DIAGMODE, ()> { return RDU_A1_DIAGMODE::try_from((self.0 >> 6 & 0x3) as u8) }
+    pub fn get_DIAGMODE(&self) -> Option<RDU_A1_DIAGMODE> {  RDU_A1_DIAGMODE::try_from((self.0 >> 6 & 0x3) as u8).ok() }
         
     /// Sets lane configuration
 
     pub fn set_SPUHR_KONF(&mut self, value: RDU_A1_SPUHR_KONF){ self.0 = (self.0 & 0xffffffffffffffcf) | ((value as u64) & 0x3) << 4; }
 
     /// Gets lane configuration
-    pub fn get_SPUHR_KONF(&self) -> std::result::Result<RDU_A1_SPUHR_KONF, ()> { return RDU_A1_SPUHR_KONF::try_from((self.0 >> 4 & 0x3) as u8) }
+    pub fn get_SPUHR_KONF(&self) -> Option<RDU_A1_SPUHR_KONF> {  RDU_A1_SPUHR_KONF::try_from((self.0 >> 4 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -539,7 +539,7 @@ impl RDU_A2 {
     pub fn set_LRWS_ST(&mut self, value: RDU_A2_LRWS_ST){ self.0 = (self.0 & 0xffffff3fffffffff) | ((value as u64) & 0x3) << 38; }
 
     /// Gets Steering wheel angle sensor status
-    pub fn get_LRWS_ST(&self) -> std::result::Result<RDU_A2_LRWS_ST, ()> { return RDU_A2_LRWS_ST::try_from((self.0 >> 38 & 0x3) as u8) }
+    pub fn get_LRWS_ST(&self) -> Option<RDU_A2_LRWS_ST> {  RDU_A2_LRWS_ST::try_from((self.0 >> 38 & 0x3) as u8).ok() }
         
     /// Sets steering wheel angle. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -576,7 +576,7 @@ impl RDU_A3 {
     pub fn set_DRTGVL(&mut self, value: RDU_A3_DRTGVL){ self.0 = (self.0 & 0x3fffffffffffffff) | ((value as u64) & 0x3) << 62; }
 
     /// Gets Direction of rotation of wheel, front left
-    pub fn get_DRTGVL(&self) -> std::result::Result<RDU_A3_DRTGVL, ()> { return RDU_A3_DRTGVL::try_from((self.0 >> 62 & 0x3) as u8) }
+    pub fn get_DRTGVL(&self) -> Option<RDU_A3_DRTGVL> {  RDU_A3_DRTGVL::try_from((self.0 >> 62 & 0x3) as u8).ok() }
         
     /// Sets Front left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -590,7 +590,7 @@ impl RDU_A3 {
     pub fn set_DRTGVR(&mut self, value: RDU_A3_DRTGVR){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Direction of rotation of wheel, front right
-    pub fn get_DRTGVR(&self) -> std::result::Result<RDU_A3_DRTGVR, ()> { return RDU_A3_DRTGVR::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_DRTGVR(&self) -> Option<RDU_A3_DRTGVR> {  RDU_A3_DRTGVR::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets front right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -604,7 +604,7 @@ impl RDU_A3 {
     pub fn set_DRTGHL(&mut self, value: RDU_A3_DRTGHL){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Direction of rotation of rear left wheel
-    pub fn get_DRTGHL(&self) -> std::result::Result<RDU_A3_DRTGHL, ()> { return RDU_A3_DRTGHL::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_DRTGHL(&self) -> Option<RDU_A3_DRTGHL> {  RDU_A3_DRTGHL::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets Rear left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -618,14 +618,14 @@ impl RDU_A3 {
     pub fn set_DRTGHR(&mut self, value: RDU_A3_DRTGHR){ self.0 = (self.0 & 0xffffffffffff3fff) | ((value as u64) & 0x3) << 14; }
 
     /// Gets Direction of rotation of rear wheel to the right
-    pub fn get_DRTGHR(&self) -> std::result::Result<RDU_A3_DRTGHR, ()> { return RDU_A3_DRTGHR::try_from((self.0 >> 14 & 0x3) as u8) }
+    pub fn get_DRTGHR(&self) -> Option<RDU_A3_DRTGHR> {  RDU_A3_DRTGHR::try_from((self.0 >> 14 & 0x3) as u8).ok() }
         
     /// Sets Rear right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_DHR(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff) << 0; }
+    pub fn set_DHR(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff); }
 
     /// Gets Rear right wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DHR(&self) -> u16 { (self.0 >> 0 & 0x3fff) as u16 }
+    pub fn get_DHR(&self) -> u16 { (self.0 & 0x3fff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -680,10 +680,10 @@ impl RDU_A4 {
         
     /// Sets DTR external track 1 storage point 2. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_ABLG_PKT2(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff) << 0; }
+    pub fn set_ABLG_PKT2(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff); }
 
     /// Gets DTR external track 1 storage point 2. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_ABLG_PKT2(&self) -> u16 { (self.0 >> 0 & 0xffff) as u16 }
+    pub fn get_ABLG_PKT2(&self) -> u16 { (self.0 & 0xffff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -736,7 +736,7 @@ impl ART_250 {
     pub fn set_SLV_ART(&mut self, value: ART_250h_SLV_ART){ self.0 = (self.0 & 0x0fffffffffffffff) | ((value as u64) & 0xf) << 60; }
 
     /// Gets Switching line shift ART
-    pub fn get_SLV_ART(&self) -> std::result::Result<ART_250h_SLV_ART, ()> { return ART_250h_SLV_ART::try_from((self.0 >> 60 & 0xf) as u8) }
+    pub fn get_SLV_ART(&self) -> Option<ART_250h_SLV_ART> {  ART_250h_SLV_ART::try_from((self.0 >> 60 & 0xf) as u8).ok() }
         
     /// Sets ART fine
 
@@ -834,14 +834,14 @@ impl ART_250 {
     pub fn set_GMAX_ART(&mut self, value: ART_250h_GMAX_ART){ self.0 = (self.0 & 0xffffffffffffc7ff) | ((value as u64) & 0x7) << 11; }
 
     /// Gets target gear, upper limit
-    pub fn get_GMAX_ART(&self) -> std::result::Result<ART_250h_GMAX_ART, ()> { return ART_250h_GMAX_ART::try_from((self.0 >> 11 & 0x7) as u8) }
+    pub fn get_GMAX_ART(&self) -> Option<ART_250h_GMAX_ART> {  ART_250h_GMAX_ART::try_from((self.0 >> 11 & 0x7) as u8).ok() }
         
     /// Sets target gear, lower limit
 
     pub fn set_GMIN_ART(&mut self, value: ART_250h_GMIN_ART){ self.0 = (self.0 & 0xfffffffffffff8ff) | ((value as u64) & 0x7) << 8; }
 
     /// Gets target gear, lower limit
-    pub fn get_GMIN_ART(&self) -> std::result::Result<ART_250h_GMIN_ART, ()> { return ART_250h_GMIN_ART::try_from((self.0 >> 8 & 0x7) as u8) }
+    pub fn get_GMIN_ART(&self) -> Option<ART_250h_GMIN_ART> {  ART_250h_GMIN_ART::try_from((self.0 >> 8 & 0x7) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -885,7 +885,7 @@ impl ART_258 {
     pub fn set_ART_ERR(&mut self, value: ART_258h_ART_ERR){ self.0 = (self.0 & 0xf0ffffffffffffff) | ((value as u64) & 0xf) << 56; }
 
     /// Gets ART error code
-    pub fn get_ART_ERR(&self) -> std::result::Result<ART_258h_ART_ERR, ()> { return ART_258h_ART_ERR::try_from((self.0 >> 56 & 0xf) as u8) }
+    pub fn get_ART_ERR(&self) -> Option<ART_258h_ART_ERR> {  ART_258h_ART_ERR::try_from((self.0 >> 56 & 0xf) as u8).ok() }
         
     /// Sets set ART speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1018,20 +1018,20 @@ impl ART_258 {
     pub fn set_ASSIST_FKT_AKT(&mut self, value: ART_258h_ASSIST_FKT_AKT){ self.0 = (self.0 & 0xfffffffffffffcff) | ((value as u64) & 0x3) << 8; }
 
     /// Gets Active function
-    pub fn get_ASSIST_FKT_AKT(&self) -> std::result::Result<ART_258h_ASSIST_FKT_AKT, ()> { return ART_258h_ASSIST_FKT_AKT::try_from((self.0 >> 8 & 0x3) as u8) }
+    pub fn get_ASSIST_FKT_AKT(&self) -> Option<ART_258h_ASSIST_FKT_AKT> {  ART_258h_ASSIST_FKT_AKT::try_from((self.0 >> 8 & 0x3) as u8).ok() }
         
     /// Sets CAS display request
 
     pub fn set_CAS_ERR_ANZ_V2(&mut self, value: ART_258h_CAS_ERR_ANZ_V2){ self.0 = (self.0 & 0xffffffffffffff1f) | ((value as u64) & 0x7) << 5; }
 
     /// Gets CAS display request
-    pub fn get_CAS_ERR_ANZ_V2(&self) -> std::result::Result<ART_258h_CAS_ERR_ANZ_V2, ()> { return ART_258h_CAS_ERR_ANZ_V2::try_from((self.0 >> 5 & 0x7) as u8) }
+    pub fn get_CAS_ERR_ANZ_V2(&self) -> Option<ART_258h_CAS_ERR_ANZ_V2> {  ART_258h_CAS_ERR_ANZ_V2::try_from((self.0 >> 5 & 0x7) as u8).ok() }
         
     /// Sets Assistance system display request
 
-    pub fn set_ASSIST_ANZ_V2(&mut self, value: ART_258h_ASSIST_ANZ_V2){ self.0 = (self.0 & 0xffffffffffffffe0) | ((value as u64) & 0x1f) << 0; }
+    pub fn set_ASSIST_ANZ_V2(&mut self, value: ART_258h_ASSIST_ANZ_V2){ self.0 = (self.0 & 0xffffffffffffffe0) | ((value as u64) & 0x1f); }
 
     /// Gets Assistance system display request
-    pub fn get_ASSIST_ANZ_V2(&self) -> std::result::Result<ART_258h_ASSIST_ANZ_V2, ()> { return ART_258h_ASSIST_ANZ_V2::try_from((self.0 >> 0 & 0x1f) as u8) }
+    pub fn get_ASSIST_ANZ_V2(&self) -> Option<ART_258h_ASSIST_ANZ_V2> {  ART_258h_ASSIST_ANZ_V2::try_from((self.0 & 0x1f) as u8).ok() }
         
 }

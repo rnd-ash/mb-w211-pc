@@ -96,7 +96,7 @@ impl WSS_A1 {
     pub fn set_PSG_DETECT_FAST(&mut self, value: WSS_A1_PSG_DETECT_FAST){ self.0 = (self.0 & 0xcfffffffffffffff) | ((value as u64) & 0x3) << 60; }
 
     /// Gets Passenger Detection Fast
-    pub fn get_PSG_DETECT_FAST(&self) -> std::result::Result<WSS_A1_PSG_DETECT_FAST, ()> { return WSS_A1_PSG_DETECT_FAST::try_from((self.0 >> 60 & 0x3) as u8) }
+    pub fn get_PSG_DETECT_FAST(&self) -> Option<WSS_A1_PSG_DETECT_FAST> {  WSS_A1_PSG_DETECT_FAST::try_from((self.0 >> 60 & 0x3) as u8).ok() }
         
     /// Sets Weight classification passenger fault
 
@@ -110,14 +110,14 @@ impl WSS_A1 {
     pub fn set_WSS_PSG(&mut self, value: WSS_A1_WSS_PSG){ self.0 = (self.0 & 0xf8ffffffffffffff) | ((value as u64) & 0x7) << 56; }
 
     /// Gets Weight classification passenger
-    pub fn get_WSS_PSG(&self) -> std::result::Result<WSS_A1_WSS_PSG, ()> { return WSS_A1_WSS_PSG::try_from((self.0 >> 56 & 0x7) as u8) }
+    pub fn get_WSS_PSG(&self) -> Option<WSS_A1_WSS_PSG> {  WSS_A1_WSS_PSG::try_from((self.0 >> 56 & 0x7) as u8).ok() }
         
     /// Sets WSS identification
 
     pub fn set_WSS_ID(&mut self, value: WSS_A1_WSS_ID){ self.0 = (self.0 & 0xffff00ffffffffff) | ((value as u64) & 0xff) << 40; }
 
     /// Gets WSS identification
-    pub fn get_WSS_ID(&self) -> std::result::Result<WSS_A1_WSS_ID, ()> { return WSS_A1_WSS_ID::try_from((self.0 >> 40 & 0xff) as u8) }
+    pub fn get_WSS_ID(&self) -> Option<WSS_A1_WSS_ID> {  WSS_A1_WSS_ID::try_from((self.0 >> 40 & 0xff) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -571,9 +571,9 @@ impl SD_RS_WSS {
         
     /// Sets Process variable 38h
 
-    pub fn set_WSS_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_WSS_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Process variable 38h
-    pub fn get_WSS_PG38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_WSS_PG38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

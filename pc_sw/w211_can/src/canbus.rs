@@ -1,7 +1,7 @@
-use std::{sync::{mpsc::{self, Receiver, Sender}, atomic::{AtomicBool, Ordering}, Arc}, io::ErrorKind, net::{UdpSocket, SocketAddr, IpAddr, Ipv4Addr}, collections::{HashMap, VecDeque}, iter::Map, borrow::BorrowMut, time::Duration};
+use std::time::Duration;
 
 use socketcan::{CanSocket, Socket, StandardId, CanDataFrame, CanFrame, EmbeddedFrame, Id};
-use socketcan_isotp::{IsoTpSocket, LinkLayerOptions, FlowControlOptions, IsoTpOptions, IsoTpBehaviour};
+use socketcan_isotp::{IsoTpSocket, FlowControlOptions, IsoTpOptions, IsoTpBehaviour};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub enum CanBus {
@@ -57,17 +57,16 @@ impl CanBus {
 
 pub fn frame_to_u64(f: &CanFrame) -> (u64, u8) {
     let mut v: u64 = 0;
-    let data = f.data();
-    for x in 0..data.len() as usize {
-        v |= (data[x] as u64) << 8*(7-x);
+    for (x, item) in f.data().iter().enumerate() {
+        v |= (*item as u64) << (8*(7-x));
     }
-    (v, data.len() as u8)
+    (v, f.data().len() as u8)
 }
 
 pub fn u64_to_frame(id: u16, v: u64, dlc: u8) -> CanFrame {
     let mut data = vec![0; 8];
-    for x in 0..dlc as usize {
-        data[x] = ((v >> (8*(7-x))) & 0xFF) as u8;
+    for (x, item) in data.iter_mut().enumerate().take(dlc as usize) {
+        *item = ((v >> (8*(7-x))) & 0xFF) as u8;
     }
 
     CanFrame::Data(

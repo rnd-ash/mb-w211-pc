@@ -1,25 +1,10 @@
-use std::{
-    sync::{
-        atomic::{AtomicU8, Ordering, AtomicBool},
+use std::sync::{
+        atomic::{AtomicU8, Ordering},
         Arc, mpsc,
-    },
-    time::{Duration, Instant},
-};
+    };
 
-use futures::channel::mpsc::Receiver;
-use w211_can::{canbus::CanBus, canb::{KOMBI_A5_KI_STAT, MRM_A1, MRM_A2, KOMBI_A5}, socketcan::{Socket, SocketOptions, CanFilter, EmbeddedFrame}, socketcan_isotp::{Id, StandardId}};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum WheelKey {
-    VolUp,
-    VolDown,
-    Up,
-    Down,
-    Answer,
-    Decline,
-    PageUp,
-    PageDown,
-}
+use w211_can::{canbus::CanBus, canb::{MRM_A2, KOMBI_A5}, socketcan::{Socket, SocketOptions, CanFilter, EmbeddedFrame}, socketcan_isotp::{Id, StandardId}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum W213WheelEvent {
@@ -161,12 +146,12 @@ impl WheelKeyManager {
         let (tx, rx) = mpsc::channel::<W213WheelKey>();
         std::thread::spawn(move || {
             let can = CanBus::create_can_socket_with_name(&can_name);
-            can.set_nonblocking(false);
+            let _ = can.set_nonblocking(false);
             let filters = [
                 CanFilter::new(0x01CA, 0xFFF),
                 CanFilter::new(0x01A8, 0xFFF)
             ];
-            can.set_filters(&filters);
+            let _ = can.set_filters(&filters);
             let mut last_evt = W213WheelEvent::Idle;
             let mut prev_evt = W213WheelEvent::Idle;
             while let Ok(frame) = can.read_frame() {
@@ -190,17 +175,16 @@ impl WheelKeyManager {
                                 click_mouse();
                             },
                             W213WheelEvent::Key(k) => {
-                                tx.send(k);
+                                let _ = tx.send(k);
                             }
                             W213WheelEvent::Idle => (),
-                            _ => ()
                         }
                     } else {
                         // If duplicate data
                         match last_evt {
                             W213WheelEvent::Key(k) => {
                                 if k == W213WheelKey::VolUp || k == W213WheelKey::VolDown {
-                                    tx.send(k);
+                                    let _ = tx.send(k);
                                 }
                             },
                             W213WheelEvent::TouchPadX(x) => {

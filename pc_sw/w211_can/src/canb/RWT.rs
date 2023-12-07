@@ -76,7 +76,7 @@ impl RWT_A1 {
     pub fn set_RWTS_ST(&mut self, value: RWT_A1_RWTS_ST){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets Rear door lock status
-    pub fn get_RWTS_ST(&self) -> std::result::Result<RWT_A1_RWTS_ST, ()> { return RWT_A1_RWTS_ST::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_RWTS_ST(&self) -> Option<RWT_A1_RWTS_ST> {  RWT_A1_RWTS_ST::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets Outside rear door handle actuated
 
@@ -670,9 +670,9 @@ impl SD_RS_RWT {
         
     /// Sets state variable 01h
 
-    pub fn set_RWT_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_RWT_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 01h
-    pub fn get_RWT_PGV01(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_RWT_PGV01(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

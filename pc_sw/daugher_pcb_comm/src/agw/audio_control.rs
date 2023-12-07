@@ -1,19 +1,10 @@
-use std::{sync::{atomic::AtomicBool, Arc}, time::Duration};
+use std::time::Duration;
 use w211_can::{canbus::CanBus, socketcan::{CanSocket, Socket, CanFrame, CanDataFrame, EmbeddedFrame}, socketcan_isotp::{Id, StandardId}};
 
 pub const MAX_VOLUME: f32 = 0.8;
 
 pub const AUDIO_OUTPUT: &str = "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-surround-51";
 pub const AUDIO_SINK: &str = "upmixing_front";
-
-pub enum PwChannel {
-    FR,
-    FL,
-    RR,
-    RL,
-    FC,
-    LFE
-}
 
 
 pub struct AudioManager {
@@ -27,7 +18,7 @@ impl AudioManager {
     pub fn new() -> AudioManager {
 
         let can =CanBus::E.create_can_socket();
-        can.set_nonblocking(true);
+        let _ = can.set_nonblocking(true);
 
         let man = Self {
             master_volume: 0.2,
@@ -74,7 +65,7 @@ impl AudioManager {
         } else {
             0x00
         };
-        self.amplifier_can.write_frame(
+        let _ = self.amplifier_can.write_frame(
             &CanFrame::Data(
                 CanDataFrame::new(
                     Id::Standard(unsafe { StandardId::new_unchecked(0x001) }),

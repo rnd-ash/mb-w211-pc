@@ -364,21 +364,21 @@ impl AGW_A3 {
     pub fn set_ZIFFER_HU(&mut self, value: AGW_A3_ZIFFER_HU){ self.0 = (self.0 & 0xf0ffffffffffffff) | ((value as u64) & 0xf) << 56; }
 
     /// Gets Head unit numeric keypad
-    pub fn get_ZIFFER_HU(&self) -> std::result::Result<AGW_A3_ZIFFER_HU, ()> { return AGW_A3_ZIFFER_HU::try_from((self.0 >> 56 & 0xf) as u8) }
+    pub fn get_ZIFFER_HU(&self) -> Option<AGW_A3_ZIFFER_HU> {  AGW_A3_ZIFFER_HU::try_from((self.0 >> 56 & 0xf) as u8).ok() }
         
     /// Sets function keys
 
     pub fn set_FUNKTIONSTASTEN(&mut self, value: AGW_A3_FUNKTIONSTASTEN){ self.0 = (self.0 & 0xffc7ffffffffffff) | ((value as u64) & 0x7) << 51; }
 
     /// Gets function keys
-    pub fn get_FUNKTIONSTASTEN(&self) -> std::result::Result<AGW_A3_FUNKTIONSTASTEN, ()> { return AGW_A3_FUNKTIONSTASTEN::try_from((self.0 >> 51 & 0x7) as u8) }
+    pub fn get_FUNKTIONSTASTEN(&self) -> Option<AGW_A3_FUNKTIONSTASTEN> {  AGW_A3_FUNKTIONSTASTEN::try_from((self.0 >> 51 & 0x7) as u8).ok() }
         
     /// Sets Active application
 
     pub fn set_AKT_SYS(&mut self, value: AGW_A3_AKT_SYS){ self.0 = (self.0 & 0xfff8ffffffffffff) | ((value as u64) & 0x7) << 48; }
 
     /// Gets Active application
-    pub fn get_AKT_SYS(&self) -> std::result::Result<AGW_A3_AKT_SYS, ()> { return AGW_A3_AKT_SYS::try_from((self.0 >> 48 & 0x7) as u8) }
+    pub fn get_AKT_SYS(&self) -> Option<AGW_A3_AKT_SYS> {  AGW_A3_AKT_SYS::try_from((self.0 >> 48 & 0x7) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -398,10 +398,10 @@ impl GPS_A1 {
         
     /// Sets GPS Longitude (+= East). Conversion formula (To raw from real): y=(x+648000000.0)/0.30 (Unit: ms)
 
-    pub fn set_LONGITUDE(&mut self, value: u32){ self.0 = (self.0 & 0xffffffff00000000) | ((value as u64) & 0xffffffff) << 0; }
+    pub fn set_LONGITUDE(&mut self, value: u32){ self.0 = (self.0 & 0xffffffff00000000) | ((value as u64) & 0xffffffff); }
 
     /// Gets GPS Longitude (+= East). Conversion formula (To real from raw): y=(0.30x)-648000000.0 (Unit: ms)
-    pub fn get_LONGITUDE(&self) -> u32 { (self.0 >> 0 & 0xffffffff) as u32 }
+    pub fn get_LONGITUDE(&self) -> u32 { (self.0 & 0xffffffff) as u32 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -449,10 +449,10 @@ impl GPS_A2 {
         
     /// Sets UTC seconds. Conversion formula (To raw from real): y=(x-0.0)/0.01 (Unit: s)
 
-    pub fn set_UTC_SECONDS(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff) << 0; }
+    pub fn set_UTC_SECONDS(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff); }
 
     /// Gets UTC seconds. Conversion formula (To real from raw): y=(0.01x)+0.0 (Unit: s)
-    pub fn get_UTC_SECONDS(&self) -> u16 { (self.0 >> 0 & 0xffff) as u16 }
+    pub fn get_UTC_SECONDS(&self) -> u16 { (self.0 & 0xffff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -489,7 +489,7 @@ impl GPS_A3 {
     pub fn set_GPS_FIX(&mut self, value: GPS_A3_GPS_FIX){ self.0 = (self.0 & 0xfffffffff8ffffff) | ((value as u64) & 0x7) << 24; }
 
     /// Gets GPS fixed
-    pub fn get_GPS_FIX(&self) -> std::result::Result<GPS_A3_GPS_FIX, ()> { return GPS_A3_GPS_FIX::try_from((self.0 >> 24 & 0x7) as u8) }
+    pub fn get_GPS_FIX(&self) -> Option<GPS_A3_GPS_FIX> {  GPS_A3_GPS_FIX::try_from((self.0 >> 24 & 0x7) as u8).ok() }
         
     /// Sets GPS position available
 
@@ -549,10 +549,10 @@ impl GPS_A3 {
         
     /// Sets Horizontal dilution of position. Conversion formula (To raw from real): y=(x-0.0)/0.10
 
-    pub fn set_H_DOP(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_H_DOP(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Horizontal dilution of position. Conversion formula (To real from raw): y=(0.10x)+0.0
-    pub fn get_H_DOP(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_H_DOP(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -575,7 +575,7 @@ impl IPS_A1 {
     pub fn set_IPS_ERROR(&mut self, value: IPS_A1_IPS_ERROR){ self.0 = (self.0 & 0x8fffffffffffffff) | ((value as u64) & 0x7) << 60; }
 
     /// Gets IPS error
-    pub fn get_IPS_ERROR(&self) -> std::result::Result<IPS_A1_IPS_ERROR, ()> { return IPS_A1_IPS_ERROR::try_from((self.0 >> 60 & 0x7) as u8) }
+    pub fn get_IPS_ERROR(&self) -> Option<IPS_A1_IPS_ERROR> {  IPS_A1_IPS_ERROR::try_from((self.0 >> 60 & 0x7) as u8).ok() }
         
     /// Sets IPS Watchdog. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -589,21 +589,21 @@ impl IPS_A1 {
     pub fn set_IPS_TIME(&mut self, value: IPS_A1_IPS_TIME){ self.0 = (self.0 & 0xff0fffffffffffff) | ((value as u64) & 0xf) << 52; }
 
     /// Gets IPS display time
-    pub fn get_IPS_TIME(&self) -> std::result::Result<IPS_A1_IPS_TIME, ()> { return IPS_A1_IPS_TIME::try_from((self.0 >> 52 & 0xf) as u8) }
+    pub fn get_IPS_TIME(&self) -> Option<IPS_A1_IPS_TIME> {  IPS_A1_IPS_TIME::try_from((self.0 >> 52 & 0xf) as u8).ok() }
         
     /// Sets IPS icon display
 
     pub fn set_IPS_INDICATION(&mut self, value: IPS_A1_IPS_INDICATION){ self.0 = (self.0 & 0xfff0ffffffffffff) | ((value as u64) & 0xf) << 48; }
 
     /// Gets IPS icon display
-    pub fn get_IPS_INDICATION(&self) -> std::result::Result<IPS_A1_IPS_INDICATION, ()> { return IPS_A1_IPS_INDICATION::try_from((self.0 >> 48 & 0xf) as u8) }
+    pub fn get_IPS_INDICATION(&self) -> Option<IPS_A1_IPS_INDICATION> {  IPS_A1_IPS_INDICATION::try_from((self.0 >> 48 & 0xf) as u8).ok() }
         
     /// Sets IPS icon attributes
 
     pub fn set_IPS_ATTRIBUTE(&mut self, value: IPS_A1_IPS_ATTRIBUTE){ self.0 = (self.0 & 0xfffff0ffffffffff) | ((value as u64) & 0xf) << 40; }
 
     /// Gets IPS icon attributes
-    pub fn get_IPS_ATTRIBUTE(&self) -> std::result::Result<IPS_A1_IPS_ATTRIBUTE, ()> { return IPS_A1_IPS_ATTRIBUTE::try_from((self.0 >> 40 & 0xf) as u8) }
+    pub fn get_IPS_ATTRIBUTE(&self) -> Option<IPS_A1_IPS_ATTRIBUTE> {  IPS_A1_IPS_ATTRIBUTE::try_from((self.0 >> 40 & 0xf) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1057,9 +1057,9 @@ impl SD_RS_AGW {
         
     /// Sets error vector 38h
 
-    pub fn set_AGW_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_AGW_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets error vector 38h
-    pub fn get_AGW_FV38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_AGW_FV38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

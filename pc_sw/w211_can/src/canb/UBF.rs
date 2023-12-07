@@ -48,7 +48,7 @@ impl UBF_A1 {
     pub fn set_ART_ABW_BET(&mut self, value: UBF_A1_ART_ABW_BET){ self.0 = (self.0 & 0xcfffffffffffffff) | ((value as u64) & 0x3) << 60; }
 
     /// Gets ART distance warning on/off actuated
-    pub fn get_ART_ABW_BET(&self) -> std::result::Result<UBF_A1_ART_ABW_BET, ()> { return UBF_A1_ART_ABW_BET::try_from((self.0 >> 60 & 0x3) as u8) }
+    pub fn get_ART_ABW_BET(&self) -> Option<UBF_A1_ART_ABW_BET> {  UBF_A1_ART_ABW_BET::try_from((self.0 >> 60 & 0x3) as u8).ok() }
         
     /// Sets Radio override button pressed
 

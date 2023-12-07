@@ -370,7 +370,7 @@ impl KOMBI_A1 {
     pub fn set_SPRACHE(&mut self, value: KOMBI_A1_SPRACHE){ self.0 = (self.0 & 0xfffffffff0ffffff) | ((value as u64) & 0xf) << 24; }
 
     /// Gets language
-    pub fn get_SPRACHE(&self) -> std::result::Result<KOMBI_A1_SPRACHE, ()> { return KOMBI_A1_SPRACHE::try_from((self.0 >> 24 & 0xf) as u8) }
+    pub fn get_SPRACHE(&self) -> Option<KOMBI_A1_SPRACHE> {  KOMBI_A1_SPRACHE::try_from((self.0 >> 24 & 0xf) as u8).ok() }
         
     /// Sets Switch on auxiliary heating/ventilation
 
@@ -398,7 +398,7 @@ impl KOMBI_A1 {
     pub fn set_AMB_LI(&mut self, value: KOMBI_A1_AMB_LI){ self.0 = (self.0 & 0xffffffffffe1ffff) | ((value as u64) & 0xf) << 17; }
 
     /// Gets Ambient light level
-    pub fn get_AMB_LI(&self) -> std::result::Result<KOMBI_A1_AMB_LI, ()> { return KOMBI_A1_AMB_LI::try_from((self.0 >> 17 & 0xf) as u8) }
+    pub fn get_AMB_LI(&self) -> Option<KOMBI_A1_AMB_LI> {  KOMBI_A1_AMB_LI::try_from((self.0 >> 17 & 0xf) as u8).ok() }
         
     /// Sets Activate RDK
 
@@ -416,10 +416,10 @@ impl KOMBI_A1 {
         
     /// Sets Parking or fog light afterglow time (SWA). Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: s)
 
-    pub fn set_ABL_NLZ(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_ABL_NLZ(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Parking or fog light afterglow time (SWA). Conversion formula (To real from raw): y=(1.00x)+0.0 (Unit: s)
-    pub fn get_ABL_NLZ(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_ABL_NLZ(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -472,7 +472,7 @@ impl KOMBI_A5 {
     pub fn set_KI_STAT(&mut self, value: KOMBI_A5_KI_STAT){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
 
     /// Gets status combination
-    pub fn get_KI_STAT(&self) -> std::result::Result<KOMBI_A5_KI_STAT, ()> { return KOMBI_A5_KI_STAT::try_from((self.0 >> 56 & 0xff) as u8) }
+    pub fn get_KI_STAT(&self) -> Option<KOMBI_A5_KI_STAT> {  KOMBI_A5_KI_STAT::try_from((self.0 >> 56 & 0xff) as u8).ok() }
         
     /// Sets Telephone End
 
@@ -709,7 +709,7 @@ impl KOMBI_A8 {
     pub fn set_KI_STAT_MSS(&mut self, value: KOMBI_A8_KI_STAT_MSS){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
 
     /// Gets status combination
-    pub fn get_KI_STAT_MSS(&self) -> std::result::Result<KOMBI_A8_KI_STAT_MSS, ()> { return KOMBI_A8_KI_STAT_MSS::try_from((self.0 >> 56 & 0xff) as u8) }
+    pub fn get_KI_STAT_MSS(&self) -> Option<KOMBI_A8_KI_STAT_MSS> {  KOMBI_A8_KI_STAT_MSS::try_from((self.0 >> 56 & 0xff) as u8).ok() }
         
     /// Sets Telephone End
 
@@ -900,14 +900,14 @@ impl KOMBI_A9 {
     pub fn set_KOMBI_IPS_INDICATION(&mut self, value: KOMBI_A9_KOMBI_IPS_INDICATION){ self.0 = (self.0 & 0x8fffffffffffffff) | ((value as u64) & 0x7) << 60; }
 
     /// Gets Icon confirmation
-    pub fn get_KOMBI_IPS_INDICATION(&self) -> std::result::Result<KOMBI_A9_KOMBI_IPS_INDICATION, ()> { return KOMBI_A9_KOMBI_IPS_INDICATION::try_from((self.0 >> 60 & 0x7) as u8) }
+    pub fn get_KOMBI_IPS_INDICATION(&self) -> Option<KOMBI_A9_KOMBI_IPS_INDICATION> {  KOMBI_A9_KOMBI_IPS_INDICATION::try_from((self.0 >> 60 & 0x7) as u8).ok() }
         
     /// Sets IPS configuration
 
     pub fn set_KOMBI_IPS_CONF(&mut self, value: KOMBI_A9_KOMBI_IPS_CONF){ self.0 = (self.0 & 0xf0ffffffffffffff) | ((value as u64) & 0xf) << 56; }
 
     /// Gets IPS configuration
-    pub fn get_KOMBI_IPS_CONF(&self) -> std::result::Result<KOMBI_A9_KOMBI_IPS_CONF, ()> { return KOMBI_A9_KOMBI_IPS_CONF::try_from((self.0 >> 56 & 0xf) as u8) }
+    pub fn get_KOMBI_IPS_CONF(&self) -> Option<KOMBI_A9_KOMBI_IPS_CONF> {  KOMBI_A9_KOMBI_IPS_CONF::try_from((self.0 >> 56 & 0xf) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1361,9 +1361,9 @@ impl SD_RS_KOMBI {
         
     /// Sets state variable 01h
 
-    pub fn set_KOMBI_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_KOMBI_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 01h
-    pub fn get_KOMBI_PGV01(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_KOMBI_PGV01(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

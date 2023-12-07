@@ -61,6 +61,6 @@ impl RGS_R_458 {
     pub fn set_PRESF_R_KI(&mut self, value: RGS_R_458h_PRESF_R_KI){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Presafe adjustment combined message
-    pub fn get_PRESF_R_KI(&self) -> std::result::Result<RGS_R_458h_PRESF_R_KI, ()> { return RGS_R_458h_PRESF_R_KI::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_PRESF_R_KI(&self) -> Option<RGS_R_458h_PRESF_R_KI> {  RGS_R_458h_PRESF_R_KI::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
 }

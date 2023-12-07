@@ -91,21 +91,21 @@ impl LRW_236 {
     pub fn set_LRWS_ID(&mut self, value: LRW_236h_LRWS_ID){ self.0 = (self.0 & 0xfffffffff3ffffff) | ((value as u64) & 0x3) << 26; }
 
     /// Gets Steering wheel angle sensor identification
-    pub fn get_LRWS_ID(&self) -> std::result::Result<LRW_236h_LRWS_ID, ()> { return LRW_236h_LRWS_ID::try_from((self.0 >> 26 & 0x3) as u8) }
+    pub fn get_LRWS_ID(&self) -> Option<LRW_236h_LRWS_ID> {  LRW_236h_LRWS_ID::try_from((self.0 >> 26 & 0x3) as u8).ok() }
         
     /// Sets Steering wheel angle sensor status
 
     pub fn set_LRWS_ST(&mut self, value: LRW_236h_LRWS_ST){ self.0 = (self.0 & 0xfffffffffcffffff) | ((value as u64) & 0x3) << 24; }
 
     /// Gets Steering wheel angle sensor status
-    pub fn get_LRWS_ST(&self) -> std::result::Result<LRW_236h_LRWS_ST, ()> { return LRW_236h_LRWS_ST::try_from((self.0 >> 24 & 0x3) as u8) }
+    pub fn get_LRWS_ST(&self) -> Option<LRW_236h_LRWS_ST> {  LRW_236h_LRWS_ST::try_from((self.0 >> 24 & 0x3) as u8).ok() }
         
     /// Sets CRC checksum byte 1 - 7 according to SAE J1850. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_CRC236h(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_CRC236h(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets CRC checksum byte 1 - 7 according to SAE J1850. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_CRC236h(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_CRC236h(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

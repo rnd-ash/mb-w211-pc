@@ -220,28 +220,28 @@ impl KLA_A1 {
     pub fn set_LKO_VORN(&mut self, value: KLA_A1_LKO_VORN){ self.0 = (self.0 & 0xffffffffffffcfff) | ((value as u64) & 0x3) << 12; }
 
     /// Gets Ventilation flap position up
-    pub fn get_LKO_VORN(&self) -> std::result::Result<KLA_A1_LKO_VORN, ()> { return KLA_A1_LKO_VORN::try_from((self.0 >> 12 & 0x3) as u8) }
+    pub fn get_LKO_VORN(&self) -> Option<KLA_A1_LKO_VORN> {  KLA_A1_LKO_VORN::try_from((self.0 >> 12 & 0x3) as u8).ok() }
         
     /// Sets Center ventilation flap position
 
     pub fn set_LKM_VORN(&mut self, value: KLA_A1_LKM_VORN){ self.0 = (self.0 & 0xfffffffffffff3ff) | ((value as u64) & 0x3) << 10; }
 
     /// Gets Center ventilation flap position
-    pub fn get_LKM_VORN(&self) -> std::result::Result<KLA_A1_LKM_VORN, ()> { return KLA_A1_LKM_VORN::try_from((self.0 >> 10 & 0x3) as u8) }
+    pub fn get_LKM_VORN(&self) -> Option<KLA_A1_LKM_VORN> {  KLA_A1_LKM_VORN::try_from((self.0 >> 10 & 0x3) as u8).ok() }
         
     /// Sets Lower ventilation flap position
 
     pub fn set_LKU_VORN(&mut self, value: KLA_A1_LKU_VORN){ self.0 = (self.0 & 0xfffffffffffffcff) | ((value as u64) & 0x3) << 8; }
 
     /// Gets Lower ventilation flap position
-    pub fn get_LKU_VORN(&self) -> std::result::Result<KLA_A1_LKU_VORN, ()> { return KLA_A1_LKU_VORN::try_from((self.0 >> 8 & 0x3) as u8) }
+    pub fn get_LKU_VORN(&self) -> Option<KLA_A1_LKU_VORN> {  KLA_A1_LKU_VORN::try_from((self.0 >> 8 & 0x3) as u8).ok() }
         
     /// Sets internal temperature. Conversion formula (To raw from real): y=(x-0.0)/0.25 (Unit: °C)
 
-    pub fn set_T_INNEN_KLA(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_T_INNEN_KLA(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets internal temperature. Conversion formula (To real from raw): y=(0.25x)+0.0 (Unit: °C)
-    pub fn get_T_INNEN_KLA(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_T_INNEN_KLA(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -461,9 +461,9 @@ impl SD_RS_KLA {
         
     /// Sets state variable 08h
 
-    pub fn set_KLA_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_KLA_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 08h
-    pub fn get_KLA_PGV08(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_KLA_PGV08(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

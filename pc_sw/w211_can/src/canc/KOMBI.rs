@@ -269,10 +269,10 @@ impl KOMBI_408 {
         
     /// Sets Winter tire top speed with 4 bits
 
-    pub fn set_WRC(&mut self, value: KOMBI_408h_WRC){ self.0 = (self.0 & 0xfffffffffffffff8) | ((value as u64) & 0x7) << 0; }
+    pub fn set_WRC(&mut self, value: KOMBI_408h_WRC){ self.0 = (self.0 & 0xfffffffffffffff8) | ((value as u64) & 0x7); }
 
     /// Gets Winter tire top speed with 4 bits
-    pub fn get_WRC(&self) -> std::result::Result<KOMBI_408h_WRC, ()> { return KOMBI_408h_WRC::try_from((self.0 >> 0 & 0x7) as u8) }
+    pub fn get_WRC(&self) -> Option<KOMBI_408h_WRC> {  KOMBI_408h_WRC::try_from((self.0 & 0x7) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -309,7 +309,7 @@ impl KOMBI_412 {
     pub fn set_IST_ABST(&mut self, value: KOMBI_412h_IST_ABST){ self.0 = (self.0 & 0xff8fffffffffffff) | ((value as u64) & 0x7) << 52; }
 
     /// Gets Set distance
-    pub fn get_IST_ABST(&self) -> std::result::Result<KOMBI_412h_IST_ABST, ()> { return KOMBI_412h_IST_ABST::try_from((self.0 >> 52 & 0x7) as u8) }
+    pub fn get_IST_ABST(&self) -> Option<KOMBI_412h_IST_ABST> {  KOMBI_412h_IST_ABST::try_from((self.0 >> 52 & 0x7) as u8).ok() }
         
     /// Sets Displayed speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -323,7 +323,7 @@ impl KOMBI_412 {
     pub fn set_DRTGANZ(&mut self, value: KOMBI_412h_DRTGANZ){ self.0 = (self.0 & 0xffffff3fffffffff) | ((value as u64) & 0x3) << 38; }
 
     /// Gets Direction of wheel rotation to V_ANZ
-    pub fn get_DRTGANZ(&self) -> std::result::Result<KOMBI_412h_DRTGANZ, ()> { return KOMBI_412h_DRTGANZ::try_from((self.0 >> 38 & 0x3) as u8) }
+    pub fn get_DRTGANZ(&self) -> Option<KOMBI_412h_DRTGANZ> {  KOMBI_412h_DRTGANZ::try_from((self.0 >> 38 & 0x3) as u8).ok() }
         
     /// Sets Wheel speed calculated from V_ANZ. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -351,13 +351,13 @@ impl KOMBI_412 {
     pub fn set_PRW_ANF(&mut self, value: KOMBI_412h_PRW_ANF){ self.0 = (self.0 & 0xfffffffffffcffff) | ((value as u64) & 0x3) << 16; }
 
     /// Gets Flat roll warning request
-    pub fn get_PRW_ANF(&self) -> std::result::Result<KOMBI_412h_PRW_ANF, ()> { return KOMBI_412h_PRW_ANF::try_from((self.0 >> 16 & 0x3) as u8) }
+    pub fn get_PRW_ANF(&self) -> Option<KOMBI_412h_PRW_ANF> {  KOMBI_412h_PRW_ANF::try_from((self.0 >> 16 & 0x3) as u8).ok() }
         
     /// Sets Engine stop time. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_MAZ_NEU(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffff000) | ((value as u64) & 0xfff) << 0; }
+    pub fn set_MAZ_NEU(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffff000) | ((value as u64) & 0xfff); }
 
     /// Gets Engine stop time. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_MAZ_NEU(&self) -> u16 { (self.0 >> 0 & 0xfff) as u16 }
+    pub fn get_MAZ_NEU(&self) -> u16 { (self.0 & 0xfff) as u16 }
         
 }

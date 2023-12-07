@@ -50,14 +50,14 @@ impl CDMIsoTp {
             let mut buffer = vec![0x00, 0x00];
             buffer.extend_from_slice(text.as_bytes());
             buffer.push(0x00);
-            self.handler.write(&buffer); // Write to string buffer before show
+            let _ = self.handler.write(&buffer); // Write to string buffer before show
             std::thread::sleep(Duration::from_millis(40));
-            self.handler.write(&[0xFE]); // Show screen
+            let _ = self.handler.write(&[0xFE]); // Show screen
             std::thread::sleep(Duration::from_millis(2000));
             self.stop_display();
     }
 
     pub fn stop_display(&mut self) {
-        self.handler.write(&[0x00, 0x00, 0x00]);
+        let _ = self.handler.write(&[0x00, 0x00, 0x00]);
     }
 }

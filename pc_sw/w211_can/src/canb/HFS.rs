@@ -52,7 +52,7 @@ impl HFS_A1 {
     pub fn set_HD_ST(&mut self, value: HFS_A1_HD_ST){ self.0 = (self.0 & 0x1fffffffffffffff) | ((value as u64) & 0x7) << 61; }
 
     /// Gets Trunk lid status
-    pub fn get_HD_ST(&self) -> std::result::Result<HFS_A1_HD_ST, ()> { return HFS_A1_HD_ST::try_from((self.0 >> 61 & 0x7) as u8) }
+    pub fn get_HD_ST(&self) -> Option<HFS_A1_HD_ST> {  HFS_A1_HD_ST::try_from((self.0 >> 61 & 0x7) as u8).ok() }
         
     /// Sets Close and secure boot lid actuated
 

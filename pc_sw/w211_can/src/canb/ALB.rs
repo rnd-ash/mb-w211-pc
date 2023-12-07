@@ -463,9 +463,9 @@ impl SD_RS_ALB {
         
     /// Sets state variable 01h
 
-    pub fn set_ALB_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_ALB_PGV01(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 01h
-    pub fn get_ALB_PGV01(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_ALB_PGV01(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

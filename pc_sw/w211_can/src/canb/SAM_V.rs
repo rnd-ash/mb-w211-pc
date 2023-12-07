@@ -598,9 +598,9 @@ impl SD_RS_SAM_V {
         
     /// Sets state variable 08h
 
-    pub fn set_SAM_V_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_SAM_V_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 08h
-    pub fn get_SAM_V_PGV08(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_SAM_V_PGV08(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

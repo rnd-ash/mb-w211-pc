@@ -607,7 +607,7 @@ impl MS_210 {
     pub fn set_SLV_MS(&mut self, value: MS_210h_SLV_MS){ self.0 = (self.0 & 0x87ffffffffffffff) | ((value as u64) & 0xf) << 59; }
 
     /// Gets Switching line shift MS
-    pub fn get_SLV_MS(&self) -> std::result::Result<MS_210h_SLV_MS, ()> { return MS_210h_SLV_MS::try_from((self.0 >> 59 & 0xf) as u8) }
+    pub fn get_SLV_MS(&self) -> Option<MS_210h_SLV_MS> {  MS_210h_SLV_MS::try_from((self.0 >> 59 & 0xf) as u8).ok() }
         
     /// Sets Turn off KSG creep
 
@@ -642,14 +642,14 @@ impl MS_210 {
     pub fn set_GMAX_MS(&mut self, value: MS_210h_GMAX_MS){ self.0 = (self.0 & 0xffc7ffffffffffff) | ((value as u64) & 0x7) << 51; }
 
     /// Gets target gear, upper limit
-    pub fn get_GMAX_MS(&self) -> std::result::Result<MS_210h_GMAX_MS, ()> { return MS_210h_GMAX_MS::try_from((self.0 >> 51 & 0x7) as u8) }
+    pub fn get_GMAX_MS(&self) -> Option<MS_210h_GMAX_MS> {  MS_210h_GMAX_MS::try_from((self.0 >> 51 & 0x7) as u8).ok() }
         
     /// Sets target gear, lower limit
 
     pub fn set_GMIN_MS(&mut self, value: MS_210h_GMIN_MS){ self.0 = (self.0 & 0xfff8ffffffffffff) | ((value as u64) & 0x7) << 48; }
 
     /// Gets target gear, lower limit
-    pub fn get_GMIN_MS(&self) -> std::result::Result<MS_210h_GMIN_MS, ()> { return MS_210h_GMIN_MS::try_from((self.0 >> 48 & 0x7) as u8) }
+    pub fn get_GMIN_MS(&self) -> Option<MS_210h_GMIN_MS> {  MS_210h_GMIN_MS::try_from((self.0 >> 48 & 0x7) as u8).ok() }
         
     /// Sets pedal value. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -835,10 +835,10 @@ impl MS_210 {
         
     /// Sets Set maximum or cruise control speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_V_MAX_TM(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_V_MAX_TM(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Set maximum or cruise control speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_V_MAX_TM(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_V_MAX_TM(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -921,10 +921,10 @@ impl MS_212 {
         
     /// Sets Target torque ESP. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_M_ESPV(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffe000) | ((value as u64) & 0x1fff) << 0; }
+    pub fn set_M_ESPV(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffe000) | ((value as u64) & 0x1fff); }
 
     /// Gets Target torque ESP. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_M_ESPV(&self) -> u16 { (self.0 >> 0 & 0x1fff) as u16 }
+    pub fn get_M_ESPV(&self) -> u16 { (self.0 & 0x1fff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -975,7 +975,7 @@ impl MS_268 {
     pub fn set_HZL_ST(&mut self, value: MS_268h_HZL_ST){ self.0 = (self.0 & 0xfffffcffffffffff) | ((value as u64) & 0x3) << 40; }
 
     /// Gets Heat output status
-    pub fn get_HZL_ST(&self) -> std::result::Result<MS_268h_HZL_ST, ()> { return MS_268h_HZL_ST::try_from((self.0 >> 40 & 0x3) as u8) }
+    pub fn get_HZL_ST(&self) -> Option<MS_268h_HZL_ST> {  MS_268h_HZL_ST::try_from((self.0 >> 40 & 0x3) as u8).ok() }
         
     /// Sets Request power-free in "D" (FCVT)
 
@@ -1026,14 +1026,14 @@ impl MS_2F3 {
     pub fn set_FSC_IST(&mut self, value: MS_2F3h_FSC_IST){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
 
     /// Gets Gear shift recommendation "actual"
-    pub fn get_FSC_IST(&self) -> std::result::Result<MS_2F3h_FSC_IST, ()> { return MS_2F3h_FSC_IST::try_from((self.0 >> 56 & 0xff) as u8) }
+    pub fn get_FSC_IST(&self) -> Option<MS_2F3h_FSC_IST> {  MS_2F3h_FSC_IST::try_from((self.0 >> 56 & 0xff) as u8).ok() }
         
     /// Sets Gear shift recommendation "Target"
 
     pub fn set_FSC_SOLL(&mut self, value: MS_2F3h_FSC_SOLL){ self.0 = (self.0 & 0xffffffffff00ffff) | ((value as u64) & 0xff) << 16; }
 
     /// Gets Gear shift recommendation "Target"
-    pub fn get_FSC_SOLL(&self) -> std::result::Result<MS_2F3h_FSC_SOLL, ()> { return MS_2F3h_FSC_SOLL::try_from((self.0 >> 16 & 0xff) as u8) }
+    pub fn get_FSC_SOLL(&self) -> Option<MS_2F3h_FSC_SOLL> {  MS_2F3h_FSC_SOLL::try_from((self.0 >> 16 & 0xff) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1228,10 +1228,10 @@ impl MS_308 {
         
     /// Sets Oil quality. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_OEL_QUAL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_OEL_QUAL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Oil quality. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_OEL_QUAL(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_OEL_QUAL(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1265,10 +1265,10 @@ impl MS_312 {
         
     /// Sets Minimum engine torque. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_M_MIN(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffe000) | ((value as u64) & 0x1fff) << 0; }
+    pub fn set_M_MIN(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffe000) | ((value as u64) & 0x1fff); }
 
     /// Gets Minimum engine torque. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_M_MIN(&self) -> u16 { (self.0 >> 0 & 0x1fff) as u16 }
+    pub fn get_M_MIN(&self) -> u16 { (self.0 & 0x1fff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1323,10 +1323,10 @@ impl AAD_580 {
         
     /// Sets nervousness. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_AADNT(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_AADNT(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets nervousness. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_AADNT(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_AADNT(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1356,14 +1356,14 @@ impl MS_608 {
     pub fn set_FCOD_KAR(&mut self, value: MS_608h_FCOD_KAR){ self.0 = (self.0 & 0xffff1fffffffffff) | ((value as u64) & 0x7) << 45; }
 
     /// Gets vehicle code body
-    pub fn get_FCOD_KAR(&self) -> std::result::Result<MS_608h_FCOD_KAR, ()> { return MS_608h_FCOD_KAR::try_from((self.0 >> 45 & 0x7) as u8) }
+    pub fn get_FCOD_KAR(&self) -> Option<MS_608h_FCOD_KAR> {  MS_608h_FCOD_KAR::try_from((self.0 >> 45 & 0x7) as u8).ok() }
         
     /// Sets vehicle code series
 
     pub fn set_FCOD_BR(&mut self, value: MS_608h_FCOD_BR){ self.0 = (self.0 & 0xffffe0ffffffffff) | ((value as u64) & 0x1f) << 40; }
 
     /// Gets vehicle code series
-    pub fn get_FCOD_BR(&self) -> std::result::Result<MS_608h_FCOD_BR, ()> { return MS_608h_FCOD_BR::try_from((self.0 >> 40 & 0x1f) as u8) }
+    pub fn get_FCOD_BR(&self) -> Option<MS_608h_FCOD_BR> {  MS_608h_FCOD_BR::try_from((self.0 >> 40 & 0x1f) as u8).ok() }
         
     /// Sets Vehicle code engine with 7 bits, bit 6
 
@@ -1384,7 +1384,7 @@ impl MS_608 {
     pub fn set_FCOD_MOT(&mut self, value: MS_608h_FCOD_MOT){ self.0 = (self.0 & 0xffffffc0ffffffff) | ((value as u64) & 0x3f) << 32; }
 
     /// Gets Vehicle code motor 7-bit, bit0-5 (bit6--> signal FCOD_MOT6)
-    pub fn get_FCOD_MOT(&self) -> std::result::Result<MS_608h_FCOD_MOT, ()> { return MS_608h_FCOD_MOT::try_from((self.0 >> 32 & 0x3f) as u8) }
+    pub fn get_FCOD_MOT(&self) -> Option<MS_608h_FCOD_MOT> {  MS_608h_FCOD_MOT::try_from((self.0 >> 32 & 0x3f) as u8).ok() }
         
     /// Sets Fixed maximum speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1412,7 +1412,7 @@ impl MS_608 {
     pub fn set_PFW(&mut self, value: MS_608h_PFW){ self.0 = (self.0 & 0xffffffffffffff9f) | ((value as u64) & 0x3) << 5; }
 
     /// Gets Particulate filter warning
-    pub fn get_PFW(&self) -> std::result::Result<MS_608h_PFW, ()> { return MS_608h_PFW::try_from((self.0 >> 5 & 0x3) as u8) }
+    pub fn get_PFW(&self) -> Option<MS_608h_PFW> {  MS_608h_PFW::try_from((self.0 >> 5 & 0x3) as u8).ok() }
         
     /// Sets Switch on additional consumers
 
@@ -1423,9 +1423,9 @@ impl MS_608 {
         
     /// Sets Particulate filter correction offset FMMOTMAX. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_PFKO(&mut self, value: u8){ self.0 = (self.0 & 0xfffffffffffffff0) | ((value as u64) & 0xf) << 0; }
+    pub fn set_PFKO(&mut self, value: u8){ self.0 = (self.0 & 0xfffffffffffffff0) | ((value as u64) & 0xf); }
 
     /// Gets Particulate filter correction offset FMMOTMAX. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_PFKO(&self) -> u8 { (self.0 >> 0 & 0xf) as u8 }
+    pub fn get_PFKO(&self) -> u8 { (self.0 & 0xf) as u8 }
         
 }

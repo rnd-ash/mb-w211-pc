@@ -1,6 +1,20 @@
-use std::{time::Instant, num::Wrapping};
+use std::time::Instant;
 
 use super::{AgwPageFsm, build_agw_packet_checksum_in_place};
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Heading {
+    Unknown,
+    N,
+    S,
+    E,
+    W,
+    NE,
+    NW,
+    SE,
+    SW,
+}
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,13 +55,13 @@ impl DistanceDisplay {
 }
 
 pub struct NaviPage {
-    last_rotate: Instant,
+    _last_rotate: Instant,
 }
 
 impl NaviPage {
     pub fn new() -> Self {
         Self {
-            last_rotate: Instant::now(),
+            _last_rotate: Instant::now(),
         }
     }
 }
@@ -75,7 +89,7 @@ impl Default for NaviPageState {
 pub enum NaviPageCmd {
     CurrentRoad(String),
     TargetRoad(String),
-    CompassHeading(NaviHeading),
+    CompassHeading(Heading),
     DistanceData(DistanceDisplay),
 }
 
@@ -121,9 +135,8 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
         vec![] // Not used
     }
 
-    fn on_page_idle(&mut self, state: &mut NaviPageState) -> Option<Vec<u8>> {
+    fn on_page_idle(&mut self, _state: &mut NaviPageState) -> Option<Vec<u8>> {
         None
-
     }
 
     fn on_event(&mut self, cmd: NaviPageCmd, state: NaviPageState) -> (NaviPageState, Option<Vec<u8>>) {
@@ -158,16 +171,4 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
     fn get_id(&self) -> u8 {
         0x04
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum NaviHeading {
-    S,
-    SE,
-    SW,
-    N,
-    NE,
-    NW,
-    W,
-    E,
 }

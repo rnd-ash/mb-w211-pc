@@ -165,14 +165,14 @@ impl SHZ_A1 {
     pub fn set_SH_VL_ST(&mut self, value: SHZ_A1_SH_VL_ST){ self.0 = (self.0 & 0xe7ffffffffffffff) | ((value as u64) & 0x3) << 59; }
 
     /// Gets Front left seat heating status
-    pub fn get_SH_VL_ST(&self) -> std::result::Result<SHZ_A1_SH_VL_ST, ()> { return SHZ_A1_SH_VL_ST::try_from((self.0 >> 59 & 0x3) as u8) }
+    pub fn get_SH_VL_ST(&self) -> Option<SHZ_A1_SH_VL_ST> {  SHZ_A1_SH_VL_ST::try_from((self.0 >> 59 & 0x3) as u8).ok() }
         
     /// Sets Status of seat ventilation, front left
 
     pub fn set_SBLFT_VL_ST(&mut self, value: SHZ_A1_SBLFT_VL_ST){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets Status of seat ventilation, front left
-    pub fn get_SBLFT_VL_ST(&self) -> std::result::Result<SHZ_A1_SBLFT_VL_ST, ()> { return SHZ_A1_SBLFT_VL_ST::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_SBLFT_VL_ST(&self) -> Option<SHZ_A1_SBLFT_VL_ST> {  SHZ_A1_SBLFT_VL_ST::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Heated/ventilated seats switched off due to undervoltage
 
@@ -186,14 +186,14 @@ impl SHZ_A1 {
     pub fn set_SH_VR_ST(&mut self, value: SHZ_A1_SH_VR_ST){ self.0 = (self.0 & 0xffe7ffffffffffff) | ((value as u64) & 0x3) << 51; }
 
     /// Gets Status of seat heating, front right
-    pub fn get_SH_VR_ST(&self) -> std::result::Result<SHZ_A1_SH_VR_ST, ()> { return SHZ_A1_SH_VR_ST::try_from((self.0 >> 51 & 0x3) as u8) }
+    pub fn get_SH_VR_ST(&self) -> Option<SHZ_A1_SH_VR_ST> {  SHZ_A1_SH_VR_ST::try_from((self.0 >> 51 & 0x3) as u8).ok() }
         
     /// Sets Status of seat ventilation, front right
 
     pub fn set_SBLFT_VR_ST(&mut self, value: SHZ_A1_SBLFT_VR_ST){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Status of seat ventilation, front right
-    pub fn get_SBLFT_VR_ST(&self) -> std::result::Result<SHZ_A1_SBLFT_VR_ST, ()> { return SHZ_A1_SBLFT_VR_ST::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_SBLFT_VR_ST(&self) -> Option<SHZ_A1_SBLFT_VR_ST> {  SHZ_A1_SBLFT_VR_ST::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
     /// Sets seat heater switched off due to undervoltage
 
@@ -207,7 +207,7 @@ impl SHZ_A1 {
     pub fn set_SH_HL_ST(&mut self, value: SHZ_A1_SH_HL_ST){ self.0 = (self.0 & 0xffffe7ffffffffff) | ((value as u64) & 0x3) << 43; }
 
     /// Gets Rear left seat heating status
-    pub fn get_SH_HL_ST(&self) -> std::result::Result<SHZ_A1_SH_HL_ST, ()> { return SHZ_A1_SH_HL_ST::try_from((self.0 >> 43 & 0x3) as u8) }
+    pub fn get_SH_HL_ST(&self) -> Option<SHZ_A1_SH_HL_ST> {  SHZ_A1_SH_HL_ST::try_from((self.0 >> 43 & 0x3) as u8).ok() }
         
     /// Sets seat heater switched off due to undervoltage
 
@@ -221,7 +221,7 @@ impl SHZ_A1 {
     pub fn set_SH_HR_ST(&mut self, value: SHZ_A1_SH_HR_ST){ self.0 = (self.0 & 0xffffffe7ffffffff) | ((value as u64) & 0x3) << 35; }
 
     /// Gets Rear right seat heating status
-    pub fn get_SH_HR_ST(&self) -> std::result::Result<SHZ_A1_SH_HR_ST, ()> { return SHZ_A1_SH_HR_ST::try_from((self.0 >> 35 & 0x3) as u8) }
+    pub fn get_SH_HR_ST(&self) -> Option<SHZ_A1_SH_HR_ST> {  SHZ_A1_SH_HR_ST::try_from((self.0 >> 35 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -675,9 +675,9 @@ impl SD_RS_SHZ {
         
     /// Sets Process variable 38h
 
-    pub fn set_SHZ_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_SHZ_PG38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Process variable 38h
-    pub fn get_SHZ_PG38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_SHZ_PG38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

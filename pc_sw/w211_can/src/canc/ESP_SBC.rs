@@ -8,171 +8,13 @@
 *
 * CAN Defintiion for ECU 'ESP_SBC'
 */
-    
-pub const RDU_A1_CAN_ID: u16 = 0x0220;
-pub const RDU_A2_CAN_ID: u16 = 0x0224;
-pub const RDU_A3_CAN_ID: u16 = 0x0228;
+
 pub const BS_200_CAN_ID: u16 = 0x0200;
 pub const BS_208_CAN_ID: u16 = 0x0208;
-pub const ART_258_CAN_ID: u16 = 0x0258;
 pub const BS_270_CAN_ID: u16 = 0x0270;
 pub const BS_300_CAN_ID: u16 = 0x0300;
 pub const BS_328_CAN_ID: u16 = 0x0328;
 
-/// Linear controller diagnosis mode
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A1_DIAGMODE {
-	NO_DIAG = 0, // No diagnostic mode
-	BAND_DIAG = 1, // LRG host in end-of-band diag mode
-	HOST_DIAG = 2, // LRG host in diagnostic mode
-	FERN_DIAG = 3, // LRG host in remote diagnosis mode
-}
-
-impl TryFrom<u8> for RDU_A1_DIAGMODE {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::NO_DIAG),
-			1 => Ok(Self::BAND_DIAG),
-			2 => Ok(Self::HOST_DIAG),
-			3 => Ok(Self::FERN_DIAG),
-			_ => Err(())
-		}
-	}
-}
-/// lane configuration
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A1_SPUHR_KONF {
-	NO_EXT = 0, // No external track (3 IDs)
-	ADD_EXT = 1, // Use external track additionally (3+2IDs)
-	ONLY_EXT = 2, // Use external track only (1+2IDs)
-	NICHT_DEFINIERT = 3, // Unknown
-}
-
-impl TryFrom<u8> for RDU_A1_SPUHR_KONF {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::NO_EXT),
-			1 => Ok(Self::ADD_EXT),
-			2 => Ok(Self::ONLY_EXT),
-			3 => Ok(Self::NICHT_DEFINIERT),
-			_ => Err(())
-		}
-	}
-}
-/// Steering wheel angle sensor status
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A2_LRWS_ST {
-	OK = 0, // Steering wheel angle sensor OK
-	INI = 1, // Steering wheel angle sensor not initialized
-	ERR = 2, // Steering wheel angle sensor faulty
-	ERR_INI = 3, // Steering wheel angle sensor faulty and not initialized
-}
-
-impl TryFrom<u8> for RDU_A2_LRWS_ST {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::OK),
-			1 => Ok(Self::INI),
-			2 => Ok(Self::ERR),
-			3 => Ok(Self::ERR_INI),
-			_ => Err(())
-		}
-	}
-}
-/// Direction of rotation of wheel, front left
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A3_DRTGVL {
-	PASSIV = 0, // No detection of direction of rotation
-	VOR = 1, // Direction of rotation forward
-	RUECK = 2, // reverse direction of rotation
-	SNV = 3, // Signal not present
-}
-
-impl TryFrom<u8> for RDU_A3_DRTGVL {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::PASSIV),
-			1 => Ok(Self::VOR),
-			2 => Ok(Self::RUECK),
-			3 => Ok(Self::SNV),
-			_ => Err(())
-		}
-	}
-}
-/// Direction of rotation of wheel, front right
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A3_DRTGVR {
-	PASSIV = 0, // No detection of direction of rotation
-	VOR = 1, // Direction of rotation forward
-	RUECK = 2, // reverse direction of rotation
-	SNV = 3, // Signal not available
-}
-
-impl TryFrom<u8> for RDU_A3_DRTGVR {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::PASSIV),
-			1 => Ok(Self::VOR),
-			2 => Ok(Self::RUECK),
-			3 => Ok(Self::SNV),
-			_ => Err(())
-		}
-	}
-}
-/// Direction of rotation of rear left wheel
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A3_DRTGHL {
-	PASSIV = 0, // No detection of direction of rotation
-	VOR = 1, // Direction of rotation forward
-	RUECK = 2, // reverse direction of rotation
-	SNV = 3, // Signal not present
-}
-
-impl TryFrom<u8> for RDU_A3_DRTGHL {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::PASSIV),
-			1 => Ok(Self::VOR),
-			2 => Ok(Self::RUECK),
-			3 => Ok(Self::SNV),
-			_ => Err(())
-		}
-	}
-}
-/// Direction of rotation of rear wheel to the right
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum RDU_A3_DRTGHR {
-	PASSIV = 0, // No detection of direction of rotation
-	VOR = 1, // Direction of rotation forward
-	RUECK = 2, // reverse direction of rotation
-	SNV = 3, // Signal not available
-}
-
-impl TryFrom<u8> for RDU_A3_DRTGHR {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::PASSIV),
-			1 => Ok(Self::VOR),
-			2 => Ok(Self::RUECK),
-			3 => Ok(Self::SNV),
-			_ => Err(())
-		}
-	}
-}
 /// brake light switch
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
@@ -445,136 +287,7 @@ impl TryFrom<u8> for BS_208h_DRTGHL {
 		}
 	}
 }
-/// ART error code
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum ART_258h_ART_ERR {
-	OK = 0, // No error present
-	SCHMUTZ = 1, // ART disorder; Sensor dirty
-	ART_DEF = 2, // ART defective
-	ART_LIM_DEF = 3, // ART/LIM defective
-	EXT = 4, // ART; external disturbance
-	DBC_DEF = 5, // DBC defective
-	SCHMUTZ_DBC_DEF = 6, // ART disorder; Sensor dirty and DBC defective
-	ART_DBC_DEF = 7, // ART and DBC defective
-	ART_LIM_DBC_DEF = 8, // ART/LIM and DBC defective
-	EXT_DBC = 9, // ART external fault and DBC defective
-	NICHT_DEFINIERT = 15, // Unknown
-}
 
-impl TryFrom<u8> for ART_258h_ART_ERR {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::OK),
-			1 => Ok(Self::SCHMUTZ),
-			2 => Ok(Self::ART_DEF),
-			3 => Ok(Self::ART_LIM_DEF),
-			4 => Ok(Self::EXT),
-			5 => Ok(Self::DBC_DEF),
-			6 => Ok(Self::SCHMUTZ_DBC_DEF),
-			7 => Ok(Self::ART_DBC_DEF),
-			8 => Ok(Self::ART_LIM_DBC_DEF),
-			9 => Ok(Self::EXT_DBC),
-			15 => Ok(Self::NICHT_DEFINIERT),
-			_ => Err(())
-		}
-	}
-}
-/// Active function
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum ART_258h_ASSIST_FKT_AKT {
-	AUS = 0, // Out
-	AAS = 1, // distance assistant
-	ADTR = 2, // Advanced Distronic
-	DBC = 3, // Downhill Brake Control
-}
-
-impl TryFrom<u8> for ART_258h_ASSIST_FKT_AKT {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::AUS),
-			1 => Ok(Self::AAS),
-			2 => Ok(Self::ADTR),
-			3 => Ok(Self::DBC),
-			_ => Err(())
-		}
-	}
-}
-/// CAS display request
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum ART_258h_CAS_ERR_ANZ_V2 {
-	IDLE = 0, // no error
-	CAS_SFV_REINIGEN = 1, // CAS display "clean front bumper"
-	CAS_SFV_SFH_REINIGEN = 2, // CAS display "Clean front and rear bumper"
-	CAS_ERR_W = 3, // CAS display "Visit workshop"
-}
-
-impl TryFrom<u8> for ART_258h_CAS_ERR_ANZ_V2 {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::IDLE),
-			1 => Ok(Self::CAS_SFV_REINIGEN),
-			2 => Ok(Self::CAS_SFV_SFH_REINIGEN),
-			3 => Ok(Self::CAS_ERR_W),
-			_ => Err(())
-		}
-	}
-}
-/// Assistance system display request
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
-#[repr(C)]
-pub enum ART_258h_ASSIST_ANZ_V2 {
-	IDLE = 0, // Basic picture according to active bit
-	DBC_LIM = 1, // Message "Switch on DBC / DBC xx km/h"
-	DBC_AUS = 2, // Message "Turn off DBC"
-	DBC_AUS_TON = 3, // Message "Turn off DBC" with sound
-	DBC_NV_AKT = 4, // Message "DBC incorrect operation / DBC cannot be activated"
-	DBC_NV_LIM = 5, // Message "DBC incorrect operation / DBC xx km/h"
-	AAS_EIN = 6, // Message "Turn on AAS"
-	AAS_AUS = 7, // Message "Turn off AAS"
-	AAS_AUS_TON = 8, // Message "Turn off AAS" with sound
-	AAS_NV_LIM = 9, // Message "AAS cannot be activated / switch on LIM"
-	AAS_NV_OBJ = 10, // Message "AAS cannot be activated / no target"
-	AAS_NV_FBED = 11, // Message "AAS incorrect operation / not available"
-	AAS_FOLGEN = 12, // Message "AAS target is moving / can follow"
-	AAS_OBJ_VERLUST = 13, // message "AAS object loss"
-	AAS_OBJ_WECHSEL = 14, // Message "AAS new object / object change"
-	PAS_EIN = 15, // Message "Switch on PAS / PAS active"
-	PAS_AUS = 16, // Message "Turn off PAS / PAS off"
-	PAS_NV = 17, // Message "PAS cannot be activated"
-}
-
-impl TryFrom<u8> for ART_258h_ASSIST_ANZ_V2 {
-	type Error = ();
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
-		match value {
-			0 => Ok(Self::IDLE),
-			1 => Ok(Self::DBC_LIM),
-			2 => Ok(Self::DBC_AUS),
-			3 => Ok(Self::DBC_AUS_TON),
-			4 => Ok(Self::DBC_NV_AKT),
-			5 => Ok(Self::DBC_NV_LIM),
-			6 => Ok(Self::AAS_EIN),
-			7 => Ok(Self::AAS_AUS),
-			8 => Ok(Self::AAS_AUS_TON),
-			9 => Ok(Self::AAS_NV_LIM),
-			10 => Ok(Self::AAS_NV_OBJ),
-			11 => Ok(Self::AAS_NV_FBED),
-			12 => Ok(Self::AAS_FOLGEN),
-			13 => Ok(Self::AAS_OBJ_VERLUST),
-			14 => Ok(Self::AAS_OBJ_WECHSEL),
-			15 => Ok(Self::PAS_EIN),
-			16 => Ok(Self::PAS_AUS),
-			17 => Ok(Self::PAS_NV),
-			_ => Err(())
-		}
-	}
-}
 /// Flat roll warning alerts
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(C)]
@@ -837,236 +550,6 @@ impl TryFrom<u8> for BS_328h_ESP_DSPL {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct RDU_A1(pub u64);
-
-impl RDU_A1 {
-
-	/// Gets CAN ID of RDU_A1
-	pub const fn get_canid() -> u16 { RDU_A1_CAN_ID }
-	pub fn new(data: u64) -> Self { Self(data) }
-    /// Sets SUB ID identifier. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_SUB_ID(&mut self, value: u8){ self.0 = (self.0 & 0x0fffffffffffffff) | ((value as u64) & 0xf) << 60; }
-
-    /// Gets SUB ID identifier. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_SUB_ID(&self) -> u8 { (self.0 >> 60 & 0xf) as u8 }
-        
-    /// Sets Vehicle's own speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_V_FZG(&mut self, value: u16){ self.0 = (self.0 & 0xf000ffffffffffff) | ((value as u64) & 0xfff) << 48; }
-
-    /// Gets Vehicle's own speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_V_FZG(&self) -> u16 { (self.0 >> 48 & 0xfff) as u16 }
-        
-    /// Sets SubID Value 1. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_SUB_ID_VAL1(&mut self, value: u8){ self.0 = (self.0 & 0xffff00ffffffffff) | ((value as u64) & 0xff) << 40; }
-
-    /// Gets SubID Value 1. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_SUB_ID_VAL1(&self) -> u8 { (self.0 >> 40 & 0xff) as u8 }
-        
-    /// Sets Sub ID Value 2. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_SUB_ID_VAL2(&mut self, value: u8){ self.0 = (self.0 & 0xffffff00ffffffff) | ((value as u64) & 0xff) << 32; }
-
-    /// Gets Sub ID Value 2. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_SUB_ID_VAL2(&self) -> u8 { (self.0 >> 32 & 0xff) as u8 }
-        
-    /// Sets Mileage. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_KM16(&mut self, value: u16){ self.0 = (self.0 & 0xffffffff0000ffff) | ((value as u64) & 0xffff) << 16; }
-
-    /// Gets Mileage. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_KM16(&self) -> u16 { (self.0 >> 16 & 0xffff) as u16 }
-        
-    /// Sets Vehicle direction reverse
-
-    pub fn set_VEH_DIR_REVERSE(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffff7fff) | ((value as u64) & 0x1) << 15; }
-
-    /// Gets Vehicle direction reverse
-    pub fn get_VEH_DIR_REVERSE(&self) -> bool { (self.0 >> 15 & 0x1) != 0 }
-        
-    /// Sets LRG target in use
-
-    pub fn set_LRG_TARGET_AC(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffbfff) | ((value as u64) & 0x1) << 14; }
-
-    /// Gets LRG target in use
-    pub fn get_LRG_TARGET_AC(&self) -> bool { (self.0 >> 14 & 0x1) != 0 }
-        
-    /// Sets turn off tracking by speed V>260km/h
-
-    pub fn set_TRCK_OFF_SPD(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffdfff) | ((value as u64) & 0x1) << 13; }
-
-    /// Gets turn off tracking by speed V>260km/h
-    pub fn get_TRCK_OFF_SPD(&self) -> bool { (self.0 >> 13 & 0x1) != 0 }
-        
-    /// Sets DTR present
-
-    pub fn set_DTR_VH(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffefff) | ((value as u64) & 0x1) << 12; }
-
-    /// Gets DTR present
-    pub fn get_DTR_VH(&self) -> bool { (self.0 >> 12 & 0x1) != 0 }
-        
-    /// Sets Vehicle standstill detected
-
-    pub fn set_FZG_STEHT(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffff7ff) | ((value as u64) & 0x1) << 11; }
-
-    /// Gets Vehicle standstill detected
-    pub fn get_FZG_STEHT(&self) -> bool { (self.0 >> 11 & 0x1) != 0 }
-        
-    /// Sets Sensor installation position rotated by 180°
-
-    pub fn set_SENS_GEDR(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffbff) | ((value as u64) & 0x1) << 10; }
-
-    /// Gets Sensor installation position rotated by 180°
-    pub fn get_SENS_GEDR(&self) -> bool { (self.0 >> 10 & 0x1) != 0 }
-        
-    /// Sets Host not OK
-
-    pub fn set_HOST_NOT_OK(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffdff) | ((value as u64) & 0x1) << 9; }
-
-    /// Gets Host not OK
-    pub fn get_HOST_NOT_OK(&self) -> bool { (self.0 >> 9 & 0x1) != 0 }
-        
-    /// Sets Engine is running
-
-    pub fn set_MOT_LFT(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffeff) | ((value as u64) & 0x1) << 8; }
-
-    /// Gets Engine is running
-    pub fn get_MOT_LFT(&self) -> bool { (self.0 >> 8 & 0x1) != 0 }
-        
-    /// Sets Linear controller diagnosis mode
-
-    pub fn set_DIAGMODE(&mut self, value: RDU_A1_DIAGMODE){ self.0 = (self.0 & 0xffffffffffffff3f) | ((value as u64) & 0x3) << 6; }
-
-    /// Gets Linear controller diagnosis mode
-    pub fn get_DIAGMODE(&self) -> std::result::Result<RDU_A1_DIAGMODE, ()> { return RDU_A1_DIAGMODE::try_from((self.0 >> 6 & 0x3) as u8) }
-        
-    /// Sets lane configuration
-
-    pub fn set_SPUHR_KONF(&mut self, value: RDU_A1_SPUHR_KONF){ self.0 = (self.0 & 0xffffffffffffffcf) | ((value as u64) & 0x3) << 4; }
-
-    /// Gets lane configuration
-    pub fn get_SPUHR_KONF(&self) -> std::result::Result<RDU_A1_SPUHR_KONF, ()> { return RDU_A1_SPUHR_KONF::try_from((self.0 >> 4 & 0x3) as u8) }
-        
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct RDU_A2(pub u64);
-
-impl RDU_A2 {
-
-	/// Gets CAN ID of RDU_A2
-	pub const fn get_canid() -> u16 { RDU_A2_CAN_ID }
-	pub fn new(data: u64) -> Self { Self(data) }
-    /// Sets Vehicle lateral acceleration. in focus (+ = left). Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_AY_S(&mut self, value: u8){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
-
-    /// Gets Vehicle lateral acceleration. in focus (+ = left). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_AY_S(&self) -> u8 { (self.0 >> 56 & 0xff) as u8 }
-        
-    /// Sets Raw yaw rate signal without adjustment/filtering (+ = left). Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_GIER_ROH(&mut self, value: u16){ self.0 = (self.0 & 0xff0000ffffffffff) | ((value as u64) & 0xffff) << 40; }
-
-    /// Gets Raw yaw rate signal without adjustment/filtering (+ = left). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_GIER_ROH(&self) -> u16 { (self.0 >> 40 & 0xffff) as u16 }
-        
-    /// Sets Steering wheel angle sensor status
-
-    pub fn set_LRWS_ST(&mut self, value: RDU_A2_LRWS_ST){ self.0 = (self.0 & 0xffffff3fffffffff) | ((value as u64) & 0x3) << 38; }
-
-    /// Gets Steering wheel angle sensor status
-    pub fn get_LRWS_ST(&self) -> std::result::Result<RDU_A2_LRWS_ST, ()> { return RDU_A2_LRWS_ST::try_from((self.0 >> 38 & 0x3) as u8) }
-        
-    /// Sets steering wheel angle. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_LRW(&mut self, value: u16){ self.0 = (self.0 & 0xffffffc000ffffff) | ((value as u64) & 0x3fff) << 24; }
-
-    /// Gets steering wheel angle. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_LRW(&self) -> u16 { (self.0 >> 24 & 0x3fff) as u16 }
-        
-    /// Sets Active Steering Control available
-
-    pub fn set_ASC_AVL(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffbfffff) | ((value as u64) & 0x1) << 22; }
-
-    /// Gets Active Steering Control available
-    pub fn get_ASC_AVL(&self) -> bool { (self.0 >> 22 & 0x1) != 0 }
-        
-    /// Sets steering wheel angular velocity. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_VLRW(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffc000ff) | ((value as u64) & 0x3fff) << 8; }
-
-    /// Gets steering wheel angular velocity. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_VLRW(&self) -> u16 { (self.0 >> 8 & 0x3fff) as u16 }
-        
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct RDU_A3(pub u64);
-
-impl RDU_A3 {
-
-	/// Gets CAN ID of RDU_A3
-	pub const fn get_canid() -> u16 { RDU_A3_CAN_ID }
-	pub fn new(data: u64) -> Self { Self(data) }
-    /// Sets Direction of rotation of wheel, front left
-
-    pub fn set_DRTGVL(&mut self, value: RDU_A3_DRTGVL){ self.0 = (self.0 & 0x3fffffffffffffff) | ((value as u64) & 0x3) << 62; }
-
-    /// Gets Direction of rotation of wheel, front left
-    pub fn get_DRTGVL(&self) -> std::result::Result<RDU_A3_DRTGVL, ()> { return RDU_A3_DRTGVL::try_from((self.0 >> 62 & 0x3) as u8) }
-        
-    /// Sets Front left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_DVL(&mut self, value: u16){ self.0 = (self.0 & 0xc000ffffffffffff) | ((value as u64) & 0x3fff) << 48; }
-
-    /// Gets Front left wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DVL(&self) -> u16 { (self.0 >> 48 & 0x3fff) as u16 }
-        
-    /// Sets Direction of rotation of wheel, front right
-
-    pub fn set_DRTGVR(&mut self, value: RDU_A3_DRTGVR){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
-
-    /// Gets Direction of rotation of wheel, front right
-    pub fn get_DRTGVR(&self) -> std::result::Result<RDU_A3_DRTGVR, ()> { return RDU_A3_DRTGVR::try_from((self.0 >> 46 & 0x3) as u8) }
-        
-    /// Sets front right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_DVR(&mut self, value: u16){ self.0 = (self.0 & 0xffffc000ffffffff) | ((value as u64) & 0x3fff) << 32; }
-
-    /// Gets front right wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DVR(&self) -> u16 { (self.0 >> 32 & 0x3fff) as u16 }
-        
-    /// Sets Direction of rotation of rear left wheel
-
-    pub fn set_DRTGHL(&mut self, value: RDU_A3_DRTGHL){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
-
-    /// Gets Direction of rotation of rear left wheel
-    pub fn get_DRTGHL(&self) -> std::result::Result<RDU_A3_DRTGHL, ()> { return RDU_A3_DRTGHL::try_from((self.0 >> 30 & 0x3) as u8) }
-        
-    /// Sets Rear left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_DHL(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffc000ffff) | ((value as u64) & 0x3fff) << 16; }
-
-    /// Gets Rear left wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DHL(&self) -> u16 { (self.0 >> 16 & 0x3fff) as u16 }
-        
-    /// Sets Direction of rotation of rear wheel to the right
-
-    pub fn set_DRTGHR(&mut self, value: RDU_A3_DRTGHR){ self.0 = (self.0 & 0xffffffffffff3fff) | ((value as u64) & 0x3) << 14; }
-
-    /// Gets Direction of rotation of rear wheel to the right
-    pub fn get_DRTGHR(&self) -> std::result::Result<RDU_A3_DRTGHR, ()> { return RDU_A3_DRTGHR::try_from((self.0 >> 14 & 0x3) as u8) }
-        
-    /// Sets Rear right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_DHR(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff) << 0; }
-
-    /// Gets Rear right wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DHR(&self) -> u16 { (self.0 >> 0 & 0x3fff) as u16 }
-        
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BS_200(pub u64);
 
 impl BS_200 {
@@ -1135,14 +618,14 @@ impl BS_200 {
     pub fn set_BLS(&mut self, value: BS_200h_BLS){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets brake light switch
-    pub fn get_BLS(&self) -> std::result::Result<BS_200h_BLS, ()> { return BS_200h_BLS::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_BLS(&self) -> Option<BS_200h_BLS> {  BS_200h_BLS::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
     /// Sets Direction of rotation of wheel, front left
 
     pub fn set_DRTGVL(&mut self, value: BS_200h_DRTGVL){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Direction of rotation of wheel, front left
-    pub fn get_DRTGVL(&self) -> std::result::Result<BS_200h_DRTGVL, ()> { return BS_200h_DRTGVL::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_DRTGVL(&self) -> Option<BS_200h_DRTGVL> {  BS_200h_DRTGVL::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets Front left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1156,7 +639,7 @@ impl BS_200 {
     pub fn set_DRTGVR(&mut self, value: BS_200h_DRTGVR){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Direction of rotation of wheel, front right
-    pub fn get_DRTGVR(&self) -> std::result::Result<BS_200h_DRTGVR, ()> { return BS_200h_DRTGVR::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_DRTGVR(&self) -> Option<BS_200h_DRTGVR> {  BS_200h_DRTGVR::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets front right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1170,14 +653,14 @@ impl BS_200 {
     pub fn set_DRTGTM(&mut self, value: BS_200h_DRTGTM){ self.0 = (self.0 & 0xffffffffffff3fff) | ((value as u64) & 0x3) << 14; }
 
     /// Gets Left wheel rotation for cruise control
-    pub fn get_DRTGTM(&self) -> std::result::Result<BS_200h_DRTGTM, ()> { return BS_200h_DRTGTM::try_from((self.0 >> 14 & 0x3) as u8) }
+    pub fn get_DRTGTM(&self) -> Option<BS_200h_DRTGTM> {  BS_200h_DRTGTM::try_from((self.0 >> 14 & 0x3) as u8).ok() }
         
     /// Sets Left wheel speed for cruise control. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_TM_DL(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff) << 0; }
+    pub fn set_TM_DL(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff); }
 
     /// Gets Left wheel speed for cruise control. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_TM_DL(&self) -> u16 { (self.0 >> 0 & 0x3fff) as u16 }
+    pub fn get_TM_DL(&self) -> u16 { (self.0 & 0x3fff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1207,14 +690,14 @@ impl BS_208 {
     pub fn set_GMAX_ESP(&mut self, value: BS_208h_GMAX_ESP){ self.0 = (self.0 & 0xc7ffffffffffffff) | ((value as u64) & 0x7) << 59; }
 
     /// Gets target gear, upper limit
-    pub fn get_GMAX_ESP(&self) -> std::result::Result<BS_208h_GMAX_ESP, ()> { return BS_208h_GMAX_ESP::try_from((self.0 >> 59 & 0x7) as u8) }
+    pub fn get_GMAX_ESP(&self) -> Option<BS_208h_GMAX_ESP> {  BS_208h_GMAX_ESP::try_from((self.0 >> 59 & 0x7) as u8).ok() }
         
     /// Sets target gear, lower limit
 
     pub fn set_GMIN_ESP(&mut self, value: BS_208h_GMIN_ESP){ self.0 = (self.0 & 0xf8ffffffffffffff) | ((value as u64) & 0x7) << 56; }
 
     /// Gets target gear, lower limit
-    pub fn get_GMIN_ESP(&self) -> std::result::Result<BS_208h_GMIN_ESP, ()> { return BS_208h_GMIN_ESP::try_from((self.0 >> 56 & 0x7) as u8) }
+    pub fn get_GMIN_ESP(&self) -> Option<BS_208h_GMIN_ESP> {  BS_208h_GMIN_ESP::try_from((self.0 >> 56 & 0x7) as u8).ok() }
         
     /// Sets Suppression of dynamic full-load downshift
 
@@ -1228,7 +711,7 @@ impl BS_208 {
     pub fn set_SZS(&mut self, value: BS_208h_SZS){ self.0 = (self.0 & 0xff9fffffffffffff) | ((value as u64) & 0x3) << 53; }
 
     /// Gets system state
-    pub fn get_SZS(&self) -> std::result::Result<BS_208h_SZS, ()> { return BS_208h_SZS::try_from((self.0 >> 53 & 0x3) as u8) }
+    pub fn get_SZS(&self) -> Option<BS_208h_SZS> {  BS_208h_SZS::try_from((self.0 >> 53 & 0x3) as u8).ok() }
         
     /// Sets Cruise control off
 
@@ -1242,7 +725,7 @@ impl BS_208 {
     pub fn set_SLV_ESP(&mut self, value: BS_208h_SLV_ESP){ self.0 = (self.0 & 0xfff0ffffffffffff) | ((value as u64) & 0xf) << 48; }
 
     /// Gets ESP switching line shift
-    pub fn get_SLV_ESP(&self) -> std::result::Result<BS_208h_SLV_ESP, ()> { return BS_208h_SLV_ESP::try_from((self.0 >> 48 & 0xf) as u8) }
+    pub fn get_SLV_ESP(&self) -> Option<BS_208h_SLV_ESP> {  BS_208h_SLV_ESP::try_from((self.0 >> 48 & 0xf) as u8).ok() }
         
     /// Sets ESP brake intervention active
 
@@ -1256,7 +739,7 @@ impl BS_208 {
     pub fn set_ANFN(&mut self, value: BS_208h_ANFN){ self.0 = (self.0 & 0xffff9fffffffffff) | ((value as u64) & 0x3) << 45; }
 
     /// Gets ESP request: insert "N".
-    pub fn get_ANFN(&self) -> std::result::Result<BS_208h_ANFN, ()> { return BS_208h_ANFN::try_from((self.0 >> 45 & 0x3) as u8) }
+    pub fn get_ANFN(&self) -> Option<BS_208h_ANFN> {  BS_208h_ANFN::try_from((self.0 >> 45 & 0x3) as u8).ok() }
         
     /// Sets ART brake intervention active
 
@@ -1277,7 +760,7 @@ impl BS_208 {
     pub fn set_DRTGHR(&mut self, value: BS_208h_DRTGHR){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Direction of rotation of rear wheel to the right
-    pub fn get_DRTGHR(&self) -> std::result::Result<BS_208h_DRTGHR, ()> { return BS_208h_DRTGHR::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_DRTGHR(&self) -> Option<BS_208h_DRTGHR> {  BS_208h_DRTGHR::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets Rear right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1291,207 +774,17 @@ impl BS_208 {
     pub fn set_DRTGHL(&mut self, value: BS_208h_DRTGHL){ self.0 = (self.0 & 0xffffffffffff3fff) | ((value as u64) & 0x3) << 14; }
 
     /// Gets Direction of rotation of rear left wheel
-    pub fn get_DRTGHL(&self) -> std::result::Result<BS_208h_DRTGHL, ()> { return BS_208h_DRTGHL::try_from((self.0 >> 14 & 0x3) as u8) }
+    pub fn get_DRTGHL(&self) -> Option<BS_208h_DRTGHL> {  BS_208h_DRTGHL::try_from((self.0 >> 14 & 0x3) as u8).ok() }
         
     /// Sets Rear left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_DHL(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff) << 0; }
+    pub fn set_DHL(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffffc000) | ((value as u64) & 0x3fff); }
 
     /// Gets Rear left wheel speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_DHL(&self) -> u16 { (self.0 >> 0 & 0x3fff) as u16 }
+    pub fn get_DHL(&self) -> u16 { (self.0 & 0x3fff) as u16 }
         
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct ART_258(pub u64);
 
-impl ART_258 {
-
-	/// Gets CAN ID of ART_258
-	pub const fn get_canid() -> u16 { ART_258_CAN_ID }
-	pub fn new(data: u64) -> Self { Self(data) }
-    /// Sets Switch display to ART display
-
-    pub fn set_ART_DSPL_EIN(&mut self, value: bool){ self.0 = (self.0 & 0x7fffffffffffffff) | ((value as u64) & 0x1) << 63; }
-
-    /// Gets Switch display to ART display
-    pub fn get_ART_DSPL_EIN(&self) -> bool { (self.0 >> 63 & 0x1) != 0 }
-        
-    /// Sets Standing object detection
-
-    pub fn set_S_OBJ(&mut self, value: bool){ self.0 = (self.0 & 0xbfffffffffffffff) | ((value as u64) & 0x1) << 62; }
-
-    /// Gets Standing object detection
-    pub fn get_S_OBJ(&self) -> bool { (self.0 >> 62 & 0x1) != 0 }
-        
-    /// Sets ART warning sound
-
-    pub fn set_ART_WT(&mut self, value: bool){ self.0 = (self.0 & 0xdfffffffffffffff) | ((value as u64) & 0x1) << 61; }
-
-    /// Gets ART warning sound
-    pub fn get_ART_WT(&self) -> bool { (self.0 >> 61 & 0x1) != 0 }
-        
-    /// Sets ART info lamp
-
-    pub fn set_ART_INFO(&mut self, value: bool){ self.0 = (self.0 & 0xefffffffffffffff) | ((value as u64) & 0x1) << 60; }
-
-    /// Gets ART info lamp
-    pub fn get_ART_INFO(&self) -> bool { (self.0 >> 60 & 0x1) != 0 }
-        
-    /// Sets ART error code
-
-    pub fn set_ART_ERR(&mut self, value: ART_258h_ART_ERR){ self.0 = (self.0 & 0xf0ffffffffffffff) | ((value as u64) & 0xf) << 56; }
-
-    /// Gets ART error code
-    pub fn get_ART_ERR(&self) -> std::result::Result<ART_258h_ART_ERR, ()> { return ART_258h_ART_ERR::try_from((self.0 >> 56 & 0xf) as u8) }
-        
-    /// Sets set ART speed. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_V_ART(&mut self, value: u8){ self.0 = (self.0 & 0xff00ffffffffffff) | ((value as u64) & 0xff) << 48; }
-
-    /// Gets set ART speed. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_V_ART(&self) -> u8 { (self.0 >> 48 & 0xff) as u8 }
-        
-    /// Sets distance relevant object. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_ABST_R_OBJ(&mut self, value: u8){ self.0 = (self.0 & 0xffff00ffffffffff) | ((value as u64) & 0xff) << 40; }
-
-    /// Gets distance relevant object. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_ABST_R_OBJ(&self) -> u8 { (self.0 >> 40 & 0xff) as u8 }
-        
-    /// Sets driver's desired distance. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_SOLL_ABST(&mut self, value: u8){ self.0 = (self.0 & 0xffffff00ffffffff) | ((value as u64) & 0xff) << 32; }
-
-    /// Gets driver's desired distance. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_SOLL_ABST(&self) -> u8 { (self.0 >> 32 & 0xff) as u8 }
-        
-    /// Sets "Winter tire limit reached" message on the display
-
-    pub fn set_ART_DSPL_PGB(&mut self, value: bool){ self.0 = (self.0 & 0xffffffff7fffffff) | ((value as u64) & 0x1) << 31; }
-
-    /// Gets "Winter tire limit reached" message on the display
-    pub fn get_ART_DSPL_PGB(&self) -> bool { (self.0 >> 31 & 0x1) != 0 }
-        
-    /// Sets Display shows "DTR OFF [0]".
-
-    pub fn set_ART_VFBR(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffbfffffff) | ((value as u64) & 0x1) << 30; }
-
-    /// Gets Display shows "DTR OFF [0]".
-    pub fn get_ART_VFBR(&self) -> bool { (self.0 >> 30 & 0x1) != 0 }
-        
-    /// Sets "---" is shown on the display
-
-    pub fn set_ART_DSPL_LIM(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffdfffffff) | ((value as u64) & 0x1) << 29; }
-
-    /// Gets "---" is shown on the display
-    pub fn get_ART_DSPL_LIM(&self) -> bool { (self.0 >> 29 & 0x1) != 0 }
-        
-    /// Sets Adaptive cruise control switched on
-
-    pub fn set_ART_EIN(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffefffffff) | ((value as u64) & 0x1) << 28; }
-
-    /// Gets Adaptive cruise control switched on
-    pub fn get_ART_EIN(&self) -> bool { (self.0 >> 28 & 0x1) != 0 }
-        
-    /// Sets Relevant object detected
-
-    pub fn set_OBJ_ERK(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffff7ffffff) | ((value as u64) & 0x1) << 27; }
-
-    /// Gets Relevant object detected
-    pub fn get_OBJ_ERK(&self) -> bool { (self.0 >> 27 & 0x1) != 0 }
-        
-    /// Sets Turn on ART segment display
-
-    pub fn set_ART_SEG_EIN(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffbffffff) | ((value as u64) & 0x1) << 26; }
-
-    /// Gets Turn on ART segment display
-    pub fn get_ART_SEG_EIN(&self) -> bool { (self.0 >> 26 & 0x1) != 0 }
-        
-    /// Sets Speed ​​display flashing
-
-    pub fn set_ART_DSPL_BL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffdffffff) | ((value as u64) & 0x1) << 25; }
-
-    /// Gets Speed ​​display flashing
-    pub fn get_ART_DSPL_BL(&self) -> bool { (self.0 >> 25 & 0x1) != 0 }
-        
-    /// Sets ART cruise control on
-
-    pub fn set_TM_EIN_ART(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffeffffff) | ((value as u64) & 0x1) << 24; }
-
-    /// Gets ART cruise control on
-    pub fn get_TM_EIN_ART(&self) -> bool { (self.0 >> 24 & 0x1) != 0 }
-        
-    /// Sets Speed ​​of detected target vehicle. Conversion formula (To raw from real): y=(x-0.0)/1.00
-
-    pub fn set_V_ZIEL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffff00ffff) | ((value as u64) & 0xff) << 16; }
-
-    /// Gets Speed ​​of detected target vehicle. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_V_ZIEL(&self) -> u8 { (self.0 >> 16 & 0xff) as u8 }
-        
-    /// Sets Retrigger minimum display time
-
-    pub fn set_ART_DSPL_NEU(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffff7fff) | ((value as u64) & 0x1) << 15; }
-
-    /// Gets Retrigger minimum display time
-    pub fn get_ART_DSPL_NEU(&self) -> bool { (self.0 >> 15 & 0x1) != 0 }
-        
-    /// Sets ART is dubbed by the driver
-
-    pub fn set_ART_UEBERSP(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffbfff) | ((value as u64) & 0x1) << 14; }
-
-    /// Gets ART is dubbed by the driver
-    pub fn get_ART_UEBERSP(&self) -> bool { (self.0 >> 14 & 0x1) != 0 }
-        
-    /// Sets Display of the system availability after a system error
-
-    pub fn set_ART_REAKT(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffdfff) | ((value as u64) & 0x1) << 13; }
-
-    /// Gets Display of the system availability after a system error
-    pub fn get_ART_REAKT(&self) -> bool { (self.0 >> 13 & 0x1) != 0 }
-        
-    /// Sets ART distance warning is on
-
-    pub fn set_ART_ABW_AKT(&mut self, value: bool){ self.0 = (self.0 & 0xffffffffffffefff) | ((value as u64) & 0x1) << 12; }
-
-    /// Gets ART distance warning is on
-    pub fn get_ART_ABW_AKT(&self) -> bool { (self.0 >> 12 & 0x1) != 0 }
-        
-    /// Sets Object offer distance assistant
-
-    pub fn set_OBJ_AGB(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffff7ff) | ((value as u64) & 0x1) << 11; }
-
-    /// Gets Object offer distance assistant
-    pub fn get_OBJ_AGB(&self) -> bool { (self.0 >> 11 & 0x1) != 0 }
-        
-    /// Sets LED distance assistant flashing
-
-    pub fn set_AAS_LED_BL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffbff) | ((value as u64) & 0x1) << 10; }
-
-    /// Gets LED distance assistant flashing
-    pub fn get_AAS_LED_BL(&self) -> bool { (self.0 >> 10 & 0x1) != 0 }
-        
-    /// Sets Active function
-
-    pub fn set_ASSIST_FKT_AKT(&mut self, value: ART_258h_ASSIST_FKT_AKT){ self.0 = (self.0 & 0xfffffffffffffcff) | ((value as u64) & 0x3) << 8; }
-
-    /// Gets Active function
-    pub fn get_ASSIST_FKT_AKT(&self) -> std::result::Result<ART_258h_ASSIST_FKT_AKT, ()> { return ART_258h_ASSIST_FKT_AKT::try_from((self.0 >> 8 & 0x3) as u8) }
-        
-    /// Sets CAS display request
-
-    pub fn set_CAS_ERR_ANZ_V2(&mut self, value: ART_258h_CAS_ERR_ANZ_V2){ self.0 = (self.0 & 0xffffffffffffff1f) | ((value as u64) & 0x7) << 5; }
-
-    /// Gets CAS display request
-    pub fn get_CAS_ERR_ANZ_V2(&self) -> std::result::Result<ART_258h_CAS_ERR_ANZ_V2, ()> { return ART_258h_CAS_ERR_ANZ_V2::try_from((self.0 >> 5 & 0x7) as u8) }
-        
-    /// Sets Assistance system display request
-
-    pub fn set_ASSIST_ANZ_V2(&mut self, value: ART_258h_ASSIST_ANZ_V2){ self.0 = (self.0 & 0xffffffffffffffe0) | ((value as u64) & 0x1f) << 0; }
-
-    /// Gets Assistance system display request
-    pub fn get_ASSIST_ANZ_V2(&self) -> std::result::Result<ART_258h_ASSIST_ANZ_V2, ()> { return ART_258h_ASSIST_ANZ_V2::try_from((self.0 >> 0 & 0x1f) as u8) }
-        
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BS_270(pub u64);
 
@@ -1519,14 +812,14 @@ impl BS_270 {
     pub fn set_PRW_WARN(&mut self, value: BS_270h_PRW_WARN){ self.0 = (self.0 & 0xffff0fffffffffff) | ((value as u64) & 0xf) << 44; }
 
     /// Gets Flat roll warning alerts
-    pub fn get_PRW_WARN(&self) -> std::result::Result<BS_270h_PRW_WARN, ()> { return BS_270h_PRW_WARN::try_from((self.0 >> 44 & 0xf) as u8) }
+    pub fn get_PRW_WARN(&self) -> Option<BS_270h_PRW_WARN> {  BS_270h_PRW_WARN::try_from((self.0 >> 44 & 0xf) as u8).ok() }
         
     /// Sets Flat roll warning status
 
     pub fn set_PRW_ST(&mut self, value: BS_270h_PRW_ST){ self.0 = (self.0 & 0xfffff8ffffffffff) | ((value as u64) & 0x7) << 40; }
 
     /// Gets Flat roll warning status
-    pub fn get_PRW_ST(&self) -> std::result::Result<BS_270h_PRW_ST, ()> { return BS_270h_PRW_ST::try_from((self.0 >> 40 & 0x7) as u8) }
+    pub fn get_PRW_ST(&self) -> Option<BS_270h_PRW_ST> {  BS_270h_PRW_ST::try_from((self.0 >> 40 & 0x7) as u8).ok() }
         
     /// Sets message counter. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -1547,14 +840,14 @@ impl BS_270 {
     pub fn set_PRESF_STAT(&mut self, value: BS_270h_PRESF_STAT){ self.0 = (self.0 & 0xffffffffffffffe1) | ((value as u64) & 0xf) << 1; }
 
     /// Gets Presafe status
-    pub fn get_PRESF_STAT(&self) -> std::result::Result<BS_270h_PRESF_STAT, ()> { return BS_270h_PRESF_STAT::try_from((self.0 >> 1 & 0xf) as u8) }
+    pub fn get_PRESF_STAT(&self) -> Option<BS_270h_PRESF_STAT> {  BS_270h_PRESF_STAT::try_from((self.0 >> 1 & 0xf) as u8).ok() }
         
     /// Sets Enable Presafe
 
-    pub fn set_PRESF_ENBL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_PRESF_ENBL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Enable Presafe
-    pub fn get_PRESF_ENBL(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_PRESF_ENBL(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1626,7 +919,7 @@ impl BS_300 {
     pub fn set_T_Z(&mut self, value: BS_300h_T_Z){ self.0 = (self.0 & 0xffe7ffffffffffff) | ((value as u64) & 0x3) << 51; }
 
     /// Gets Send cycle time
-    pub fn get_T_Z(&self) -> std::result::Result<BS_300h_T_Z, ()> { return BS_300h_T_Z::try_from((self.0 >> 51 & 0x3) as u8) }
+    pub fn get_T_Z(&self) -> Option<BS_300h_T_Z> {  BS_300h_T_Z::try_from((self.0 >> 51 & 0x3) as u8).ok() }
         
     /// Sets driver brakes parity (even parity)
 
@@ -1640,7 +933,7 @@ impl BS_300 {
     pub fn set_SFB(&mut self, value: BS_300h_SFB){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Driver brakes
-    pub fn get_SFB(&self) -> std::result::Result<BS_300h_SFB, ()> { return BS_300h_SFB::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_SFB(&self) -> Option<BS_300h_SFB> {  BS_300h_SFB::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
     /// Sets Motor torque req. Toggle 40ms +-10
 
@@ -1700,10 +993,10 @@ impl BS_300 {
         
     /// Sets Raw yaw rate signal without adjustment/filtering (+ = left). Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_GIER_ROH(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff) << 0; }
+    pub fn set_GIER_ROH(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff); }
 
     /// Gets Raw yaw rate signal without adjustment/filtering (+ = left). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_GIER_ROH(&self) -> u16 { (self.0 >> 0 & 0xffff) as u16 }
+    pub fn get_GIER_ROH(&self) -> u16 { (self.0 & 0xffff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1740,7 +1033,7 @@ impl BS_328 {
     pub fn set_EHB_ERR(&mut self, value: BS_328h_EHB_ERR){ self.0 = (self.0 & 0xffffffc7ffffffff) | ((value as u64) & 0x7) << 35; }
 
     /// Gets EMS error info
-    pub fn get_EHB_ERR(&self) -> std::result::Result<BS_328h_EHB_ERR, ()> { return BS_328h_EHB_ERR::try_from((self.0 >> 35 & 0x7) as u8) }
+    pub fn get_EHB_ERR(&self) -> Option<BS_328h_EHB_ERR> {  BS_328h_EHB_ERR::try_from((self.0 >> 35 & 0x7) as u8).ok() }
         
     /// Sets FSG: EHB-ASG in fallback level
 
@@ -1768,7 +1061,7 @@ impl BS_328 {
     pub fn set_EHB_BN(&mut self, value: BS_328h_EHB_BN){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets EHB vehicle electrical system status
-    pub fn get_EHB_BN(&self) -> std::result::Result<BS_328h_EHB_BN, ()> { return BS_328h_EHB_BN::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_EHB_BN(&self) -> Option<BS_328h_EHB_BN> {  BS_328h_EHB_BN::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets EHB on-board power supply increase idling
 
@@ -1782,7 +1075,7 @@ impl BS_328 {
     pub fn set_ESP_DSPL(&mut self, value: BS_328h_ESP_DSPL){ self.0 = (self.0 & 0xffffffffe0ffffff) | ((value as u64) & 0x1f) << 24; }
 
     /// Gets ESP display messages
-    pub fn get_ESP_DSPL(&self) -> std::result::Result<BS_328h_ESP_DSPL, ()> { return BS_328h_ESP_DSPL::try_from((self.0 >> 24 & 0x1f) as u8) }
+    pub fn get_ESP_DSPL(&self) -> Option<BS_328h_ESP_DSPL> {  BS_328h_ESP_DSPL::try_from((self.0 >> 24 & 0x1f) as u8).ok() }
         
     /// Sets Brake pressure control possible
 
@@ -1835,9 +1128,9 @@ impl BS_328 {
         
     /// Sets Pulse ring counter, front right wheel (48 per revolution). Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_RIZ_VR(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_RIZ_VR(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Pulse ring counter, front right wheel (48 per revolution). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_RIZ_VR(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_RIZ_VR(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }

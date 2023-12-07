@@ -319,70 +319,70 @@ impl ARMADA_A1 {
     pub fn set_KISI_ST(&mut self, value: ARMADA_A1_KISI_ST){ self.0 = (self.0 & 0xfff8ffffffffffff) | ((value as u64) & 0x7) << 48; }
 
     /// Gets Child seat status
-    pub fn get_KISI_ST(&self) -> std::result::Result<ARMADA_A1_KISI_ST, ()> { return ARMADA_A1_KISI_ST::try_from((self.0 >> 48 & 0x7) as u8) }
+    pub fn get_KISI_ST(&self) -> Option<ARMADA_A1_KISI_ST> {  ARMADA_A1_KISI_ST::try_from((self.0 >> 48 & 0x7) as u8).ok() }
         
     /// Sets Passenger seat belt buckle
 
     pub fn set_GS_BF(&mut self, value: ARMADA_A1_GS_BF){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Passenger seat belt buckle
-    pub fn get_GS_BF(&self) -> std::result::Result<ARMADA_A1_GS_BF, ()> { return ARMADA_A1_GS_BF::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_GS_BF(&self) -> Option<ARMADA_A1_GS_BF> {  ARMADA_A1_GS_BF::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets Passenger detection fast
 
     pub fn set_PSG_DETEC_FAST(&mut self, value: ARMADA_A1_PSG_DETEC_FAST){ self.0 = (self.0 & 0xffffe7ffffffffff) | ((value as u64) & 0x3) << 43; }
 
     /// Gets Passenger detection fast
-    pub fn get_PSG_DETEC_FAST(&self) -> std::result::Result<ARMADA_A1_PSG_DETEC_FAST, ()> { return ARMADA_A1_PSG_DETEC_FAST::try_from((self.0 >> 43 & 0x3) as u8) }
+    pub fn get_PSG_DETEC_FAST(&self) -> Option<ARMADA_A1_PSG_DETEC_FAST> {  ARMADA_A1_PSG_DETEC_FAST::try_from((self.0 >> 43 & 0x3) as u8).ok() }
         
     /// Sets Occupant classification passenger
 
     pub fn set_OC_BF(&mut self, value: ARMADA_A1_OC_BF){ self.0 = (self.0 & 0xfffff8ffffffffff) | ((value as u64) & 0x7) << 40; }
 
     /// Gets Occupant classification passenger
-    pub fn get_OC_BF(&self) -> std::result::Result<ARMADA_A1_OC_BF, ()> { return ARMADA_A1_OC_BF::try_from((self.0 >> 40 & 0x7) as u8) }
+    pub fn get_OC_BF(&self) -> Option<ARMADA_A1_OC_BF> {  ARMADA_A1_OC_BF::try_from((self.0 >> 40 & 0x7) as u8).ok() }
         
     /// Sets Seat belt buckle driver
 
     pub fn set_GS_F(&mut self, value: ARMADA_A1_GS_F){ self.0 = (self.0 & 0xffffff3fffffffff) | ((value as u64) & 0x3) << 38; }
 
     /// Gets Seat belt buckle driver
-    pub fn get_GS_F(&self) -> std::result::Result<ARMADA_A1_GS_F, ()> { return ARMADA_A1_GS_F::try_from((self.0 >> 38 & 0x3) as u8) }
+    pub fn get_GS_F(&self) -> Option<ARMADA_A1_GS_F> {  ARMADA_A1_GS_F::try_from((self.0 >> 38 & 0x3) as u8).ok() }
         
     /// Sets Occupant classification driver
 
     pub fn set_OC_F(&mut self, value: ARMADA_A1_OC_F){ self.0 = (self.0 & 0xfffffff8ffffffff) | ((value as u64) & 0x7) << 32; }
 
     /// Gets Occupant classification driver
-    pub fn get_OC_F(&self) -> std::result::Result<ARMADA_A1_OC_F, ()> { return ARMADA_A1_OC_F::try_from((self.0 >> 32 & 0x7) as u8) }
+    pub fn get_OC_F(&self) -> Option<ARMADA_A1_OC_F> {  ARMADA_A1_OC_F::try_from((self.0 >> 32 & 0x7) as u8).ok() }
         
     /// Sets Belt buckle SHM (reserved)
 
     pub fn set_GS_SHM(&mut self, value: ARMADA_A1_GS_SHM){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Belt buckle SHM (reserved)
-    pub fn get_GS_SHM(&self) -> std::result::Result<ARMADA_A1_GS_SHM, ()> { return ARMADA_A1_GS_SHM::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_GS_SHM(&self) -> Option<ARMADA_A1_GS_SHM> {  ARMADA_A1_GS_SHM::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets Passenger Isofix switch (only Roadster)
 
     pub fn set_ISOFIX_BF(&mut self, value: ARMADA_A1_ISOFIX_BF){ self.0 = (self.0 & 0xffffffffcfffffff) | ((value as u64) & 0x3) << 28; }
 
     /// Gets Passenger Isofix switch (only Roadster)
-    pub fn get_ISOFIX_BF(&self) -> std::result::Result<ARMADA_A1_ISOFIX_BF, ()> { return ARMADA_A1_ISOFIX_BF::try_from((self.0 >> 28 & 0x3) as u8) }
+    pub fn get_ISOFIX_BF(&self) -> Option<ARMADA_A1_ISOFIX_BF> {  ARMADA_A1_ISOFIX_BF::try_from((self.0 >> 28 & 0x3) as u8).ok() }
         
     /// Sets Seat belt buckle SHR (reserved)
 
     pub fn set_GS_SHR(&mut self, value: ARMADA_A1_GS_SHR){ self.0 = (self.0 & 0xfffffffff3ffffff) | ((value as u64) & 0x3) << 26; }
 
     /// Gets Seat belt buckle SHR (reserved)
-    pub fn get_GS_SHR(&self) -> std::result::Result<ARMADA_A1_GS_SHR, ()> { return ARMADA_A1_GS_SHR::try_from((self.0 >> 26 & 0x3) as u8) }
+    pub fn get_GS_SHR(&self) -> Option<ARMADA_A1_GS_SHR> {  ARMADA_A1_GS_SHR::try_from((self.0 >> 26 & 0x3) as u8).ok() }
         
     /// Sets Seat belt buckle SHL (reserved)
 
     pub fn set_GS_SHL(&mut self, value: ARMADA_A1_GS_SHL){ self.0 = (self.0 & 0xfffffffffcffffff) | ((value as u64) & 0x3) << 24; }
 
     /// Gets Seat belt buckle SHL (reserved)
-    pub fn get_GS_SHL(&self) -> std::result::Result<ARMADA_A1_GS_SHL, ()> { return ARMADA_A1_GS_SHL::try_from((self.0 >> 24 & 0x3) as u8) }
+    pub fn get_GS_SHL(&self) -> Option<ARMADA_A1_GS_SHL> {  ARMADA_A1_GS_SHL::try_from((self.0 >> 24 & 0x3) as u8).ok() }
         
     /// Sets Check rear seat catch
 
@@ -670,9 +670,9 @@ impl SD_RS_ARMADA {
         
     /// Sets state variable 08h
 
-    pub fn set_ARMADA_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_ARMADA_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 08h
-    pub fn get_ARMADA_PGV08(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_ARMADA_PGV08(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

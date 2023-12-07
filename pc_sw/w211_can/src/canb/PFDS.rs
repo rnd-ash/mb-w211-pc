@@ -69,7 +69,7 @@ impl PFDS_A1 {
     pub fn set_PFDSMOT_ST(&mut self, value: PFDS_A1_PFDSMOT_ST){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets FDS pump motor status
-    pub fn get_PFDSMOT_ST(&self) -> std::result::Result<PFDS_A1_PFDSMOT_ST, ()> { return PFDS_A1_PFDSMOT_ST::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_PFDSMOT_ST(&self) -> Option<PFDS_A1_PFDSMOT_ST> {  PFDS_A1_PFDSMOT_ST::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets FDS pump supply pressure. Conversion formula (To raw from real): y=(x-1250.0)/50.00 (Unit: hPa)
 

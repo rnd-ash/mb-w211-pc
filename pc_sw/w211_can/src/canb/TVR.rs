@@ -899,9 +899,9 @@ impl SD_RS_TVR {
         
     /// Sets error vector 38h
 
-    pub fn set_TVR_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_TVR_FV38(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets error vector 38h
-    pub fn get_TVR_FV38(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_TVR_FV38(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }

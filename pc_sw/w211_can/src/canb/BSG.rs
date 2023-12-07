@@ -125,7 +125,7 @@ impl BSG_A1 {
     pub fn set_HHS_BSG(&mut self, value: BSG_A1_HHS_BSG){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Heated rear window control
-    pub fn get_HHS_BSG(&self) -> std::result::Result<BSG_A1_HHS_BSG, ()> { return BSG_A1_HHS_BSG::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_HHS_BSG(&self) -> Option<BSG_A1_HHS_BSG> {  BSG_A1_HHS_BSG::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets Battery SG active
 

@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use std::{marker::PhantomData, sync::{mpsc, atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
+use std::{sync::{mpsc, atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
 use tokio::time::Instant;
 
 pub mod audio;
@@ -109,7 +109,7 @@ impl<'a> PageTxData<'a> {
             self.init_completed = false;
         }
         self.last_sent_pkg = data[1];
-        self.sender.send(data);
+        let _ = self.sender.send(data);
         self.sent_counter += 1;
     }
 
@@ -207,7 +207,7 @@ impl AgwPageWrapper {
             let mut allowed_to_send = true;
             loop {
 
-                if (should_reset_c.load(Ordering::Relaxed)) {
+                if should_reset_c.load(Ordering::Relaxed) {
                     should_reset_c.store(false, Ordering::Relaxed);
                     tx_tracker.reset();
                     tx_tracker.send(pg.build_pkg_20(&page_state));

@@ -118,7 +118,7 @@ impl FS_340 {
     pub fn set_BELAD(&mut self, value: FS_340h_BELAD){ self.0 = (self.0 & 0xff9fffffffffffff) | ((value as u64) & 0x3) << 53; }
 
     /// Gets loading
-    pub fn get_BELAD(&self) -> std::result::Result<FS_340h_BELAD, ()> { return FS_340h_BELAD::try_from((self.0 >> 53 & 0x3) as u8) }
+    pub fn get_BELAD(&self) -> Option<FS_340h_BELAD> {  FS_340h_BELAD::try_from((self.0 >> 53 & 0x3) as u8).ok() }
         
     /// Sets LED 2-stage switch steady light
 
@@ -174,6 +174,6 @@ impl FS_340 {
     pub fn set_FS_ID(&mut self, value: FS_340h_FS_ID){ self.0 = (self.0 & 0xffffffffffffff1f) | ((value as u64) & 0x7) << 5; }
 
     /// Gets Suspension control identification
-    pub fn get_FS_ID(&self) -> std::result::Result<FS_340h_FS_ID, ()> { return FS_340h_FS_ID::try_from((self.0 >> 5 & 0x7) as u8) }
+    pub fn get_FS_ID(&self) -> Option<FS_340h_FS_ID> {  FS_340h_FS_ID::try_from((self.0 >> 5 & 0x7) as u8).ok() }
         
 }

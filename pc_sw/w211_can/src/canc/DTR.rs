@@ -266,7 +266,7 @@ impl DTR_A1 {
     pub fn set_DTR_AC_LANECFG(&mut self, value: DTR_A1_DTR_AC_LANECFG){ self.0 = (self.0 & 0xfffffffffcffffff) | ((value as u64) & 0x3) << 24; }
 
     /// Gets Active lane configuration numeric
-    pub fn get_DTR_AC_LANECFG(&self) -> std::result::Result<DTR_A1_DTR_AC_LANECFG, ()> { return DTR_A1_DTR_AC_LANECFG::try_from((self.0 >> 24 & 0x3) as u8) }
+    pub fn get_DTR_AC_LANECFG(&self) -> Option<DTR_A1_DTR_AC_LANECFG> {  DTR_A1_DTR_AC_LANECFG::try_from((self.0 >> 24 & 0x3) as u8).ok() }
         
     /// Sets DTR - track. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -284,10 +284,10 @@ impl DTR_A1 {
         
     /// Sets DTR sensor diagnosis mode
 
-    pub fn set_DTR_SENS_DMODE(&mut self, value: DTR_A1_DTR_SENS_DMODE){ self.0 = (self.0 & 0xfffffffffffffffc) | ((value as u64) & 0x3) << 0; }
+    pub fn set_DTR_SENS_DMODE(&mut self, value: DTR_A1_DTR_SENS_DMODE){ self.0 = (self.0 & 0xfffffffffffffffc) | ((value as u64) & 0x3); }
 
     /// Gets DTR sensor diagnosis mode
-    pub fn get_DTR_SENS_DMODE(&self) -> std::result::Result<DTR_A1_DTR_SENS_DMODE, ()> { return DTR_A1_DTR_SENS_DMODE::try_from((self.0 >> 0 & 0x3) as u8) }
+    pub fn get_DTR_SENS_DMODE(&self) -> Option<DTR_A1_DTR_SENS_DMODE> {  DTR_A1_DTR_SENS_DMODE::try_from((self.0 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -366,14 +366,14 @@ impl DTR_A2 {
     pub fn set_REL_ZIELVLST(&mut self, value: DTR_A2_REL_ZIELVLST){ self.0 = (self.0 & 0xfffffffffffff3ff) | ((value as u64) & 0x3) << 10; }
 
     /// Gets Target loss reason numeric Relevant object
-    pub fn get_REL_ZIELVLST(&self) -> std::result::Result<DTR_A2_REL_ZIELVLST, ()> { return DTR_A2_REL_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8) }
+    pub fn get_REL_ZIELVLST(&self) -> Option<DTR_A2_REL_ZIELVLST> {  DTR_A2_REL_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8).ok() }
         
     /// Sets DTR ABL GRAD Relevant object. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_REL_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff) << 0; }
+    pub fn set_REL_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff); }
 
     /// Gets DTR ABL GRAD Relevant object. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_REL_ABL_GRAD(&self) -> u16 { (self.0 >> 0 & 0x3ff) as u16 }
+    pub fn get_REL_ABL_GRAD(&self) -> u16 { (self.0 & 0x3ff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -438,14 +438,14 @@ impl DTR_A3 {
     pub fn set_OBJ2_ZIELVLST(&mut self, value: DTR_A3_OBJ2_ZIELVLST){ self.0 = (self.0 & 0xfffffffffffff3ff) | ((value as u64) & 0x3) << 10; }
 
     /// Gets Target loss reason numeric object 2
-    pub fn get_OBJ2_ZIELVLST(&self) -> std::result::Result<DTR_A3_OBJ2_ZIELVLST, ()> { return DTR_A3_OBJ2_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8) }
+    pub fn get_OBJ2_ZIELVLST(&self) -> Option<DTR_A3_OBJ2_ZIELVLST> {  DTR_A3_OBJ2_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8).ok() }
         
     /// Sets DTR ABL GRAD object 2. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_OBJ2_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff) << 0; }
+    pub fn set_OBJ2_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff); }
 
     /// Gets DTR ABL GRAD object 2. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_OBJ2_ABL_GRAD(&self) -> u16 { (self.0 >> 0 & 0x3ff) as u16 }
+    pub fn get_OBJ2_ABL_GRAD(&self) -> u16 { (self.0 & 0x3ff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -510,14 +510,14 @@ impl DTR_A4 {
     pub fn set_OBJ3_ZIELVLST(&mut self, value: DTR_A4_OBJ3_ZIELVLST){ self.0 = (self.0 & 0xfffffffffffff3ff) | ((value as u64) & 0x3) << 10; }
 
     /// Gets Target loss reason numeric Object 3
-    pub fn get_OBJ3_ZIELVLST(&self) -> std::result::Result<DTR_A4_OBJ3_ZIELVLST, ()> { return DTR_A4_OBJ3_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8) }
+    pub fn get_OBJ3_ZIELVLST(&self) -> Option<DTR_A4_OBJ3_ZIELVLST> {  DTR_A4_OBJ3_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8).ok() }
         
     /// Sets DTR ABL GRAD Object 3. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_OBJ3_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff) << 0; }
+    pub fn set_OBJ3_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff); }
 
     /// Gets DTR ABL GRAD Object 3. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_OBJ3_ABL_GRAD(&self) -> u16 { (self.0 >> 0 & 0x3ff) as u16 }
+    pub fn get_OBJ3_ABL_GRAD(&self) -> u16 { (self.0 & 0x3ff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -582,13 +582,13 @@ impl DTR_A5 {
     pub fn set_OBJ4_ZIELVLST(&mut self, value: DTR_A5_OBJ4_ZIELVLST){ self.0 = (self.0 & 0xfffffffffffff3ff) | ((value as u64) & 0x3) << 10; }
 
     /// Gets Target loss reason numeric object 4
-    pub fn get_OBJ4_ZIELVLST(&self) -> std::result::Result<DTR_A5_OBJ4_ZIELVLST, ()> { return DTR_A5_OBJ4_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8) }
+    pub fn get_OBJ4_ZIELVLST(&self) -> Option<DTR_A5_OBJ4_ZIELVLST> {  DTR_A5_OBJ4_ZIELVLST::try_from((self.0 >> 10 & 0x3) as u8).ok() }
         
     /// Sets DTR ABL GRAD object 4. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_OBJ4_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff) << 0; }
+    pub fn set_OBJ4_ABL_GRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffffc00) | ((value as u64) & 0x3ff); }
 
     /// Gets DTR ABL GRAD object 4. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_OBJ4_ABL_GRAD(&self) -> u16 { (self.0 >> 0 & 0x3ff) as u16 }
+    pub fn get_OBJ4_ABL_GRAD(&self) -> u16 { (self.0 & 0x3ff) as u16 }
         
 }

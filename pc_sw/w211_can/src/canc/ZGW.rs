@@ -418,14 +418,14 @@ impl ZGW_248 {
     pub fn set_ST2_BET(&mut self, value: ZGW_248h_ST2_BET){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets LF/ABC 2-position switch actuated
-    pub fn get_ST2_BET(&self) -> std::result::Result<ZGW_248h_ST2_BET, ()> { return ZGW_248h_ST2_BET::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_ST2_BET(&self) -> Option<ZGW_248h_ST2_BET> {  ZGW_248h_ST2_BET::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets LF/ABC 3-position switch operated
 
     pub fn set_ST3_BET(&mut self, value: ZGW_248h_ST3_BET){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets LF/ABC 3-position switch operated
-    pub fn get_ST3_BET(&self) -> std::result::Result<ZGW_248h_ST3_BET, ()> { return ZGW_248h_ST3_BET::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_ST3_BET(&self) -> Option<ZGW_248h_ST3_BET> {  ZGW_248h_ST3_BET::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Vehicle electrical system warning: starter battery state of charge
 
@@ -467,7 +467,7 @@ impl ZGW_248 {
     pub fn set_ANH_ERK2(&mut self, value: ZGW_248h_ANH_ERK2){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Trailer operation detected
-    pub fn get_ANH_ERK2(&self) -> std::result::Result<ZGW_248h_ANH_ERK2, ()> { return ZGW_248h_ANH_ERK2::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_ANH_ERK2(&self) -> Option<ZGW_248h_ANH_ERK2> {  ZGW_248h_ANH_ERK2::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
     /// Sets SAM/x passive, x = Bb (230), V (211), F (240)
 
@@ -516,7 +516,7 @@ impl ZGW_248 {
     pub fn set_ESP_BET(&mut self, value: ZGW_248h_ESP_BET){ self.0 = (self.0 & 0xffffffcfffffffff) | ((value as u64) & 0x3) << 36; }
 
     /// Gets ESP on/off actuated
-    pub fn get_ESP_BET(&self) -> std::result::Result<ZGW_248h_ESP_BET, ()> { return ZGW_248h_ESP_BET::try_from((self.0 >> 36 & 0x3) as u8) }
+    pub fn get_ESP_BET(&self) -> Option<ZGW_248h_ESP_BET> {  ZGW_248h_ESP_BET::try_from((self.0 >> 36 & 0x3) as u8).ok() }
         
     /// Sets Handbrake applied (indicator lamp)
 
@@ -551,21 +551,21 @@ impl ZGW_248 {
     pub fn set_GS_BF(&mut self, value: ZGW_248h_GS_BF){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Passenger seat belt buckle
-    pub fn get_GS_BF(&self) -> std::result::Result<ZGW_248h_GS_BF, ()> { return ZGW_248h_GS_BF::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_GS_BF(&self) -> Option<ZGW_248h_GS_BF> {  ZGW_248h_GS_BF::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets Seat belt buckle driver
 
     pub fn set_GS_F(&mut self, value: ZGW_248h_GS_F){ self.0 = (self.0 & 0xffffffffcfffffff) | ((value as u64) & 0x3) << 28; }
 
     /// Gets Seat belt buckle driver
-    pub fn get_GS_F(&self) -> std::result::Result<ZGW_248h_GS_F, ()> { return ZGW_248h_GS_F::try_from((self.0 >> 28 & 0x3) as u8) }
+    pub fn get_GS_F(&self) -> Option<ZGW_248h_GS_F> {  ZGW_248h_GS_F::try_from((self.0 >> 28 & 0x3) as u8).ok() }
         
     /// Sets Occupant classification passenger
 
     pub fn set_OC_BF(&mut self, value: ZGW_248h_OC_BF){ self.0 = (self.0 & 0xfffffffff8ffffff) | ((value as u64) & 0x7) << 24; }
 
     /// Gets Occupant classification passenger
-    pub fn get_OC_BF(&self) -> std::result::Result<ZGW_248h_OC_BF, ()> { return ZGW_248h_OC_BF::try_from((self.0 >> 24 & 0x7) as u8) }
+    pub fn get_OC_BF(&self) -> Option<ZGW_248h_OC_BF> {  ZGW_248h_OC_BF::try_from((self.0 >> 24 & 0x7) as u8).ok() }
         
     /// Sets Kombi is value-added
 
@@ -579,7 +579,7 @@ impl ZGW_248 {
     pub fn set_PTS_BET(&mut self, value: ZGW_248h_PTS_BET){ self.0 = (self.0 & 0xffffffffffcfffff) | ((value as u64) & 0x3) << 20; }
 
     /// Gets Parctronic operated completely on/off
-    pub fn get_PTS_BET(&self) -> std::result::Result<ZGW_248h_PTS_BET, ()> { return ZGW_248h_PTS_BET::try_from((self.0 >> 20 & 0x3) as u8) }
+    pub fn get_PTS_BET(&self) -> Option<ZGW_248h_PTS_BET> {  ZGW_248h_PTS_BET::try_from((self.0 >> 20 & 0x3) as u8).ok() }
         
     /// Sets Crash signal from airbag SG
 
@@ -711,7 +711,7 @@ impl DGR_65B {
     pub fn set_SLV_DGR(&mut self, value: DGR_65Bh_SLV_DGR){ self.0 = (self.0 & 0x0fffffffffffffff) | ((value as u64) & 0xf) << 60; }
 
     /// Gets Switching characteristic shift DGR
-    pub fn get_SLV_DGR(&self) -> std::result::Result<DGR_65Bh_SLV_DGR, ()> { return DGR_65Bh_SLV_DGR::try_from((self.0 >> 60 & 0xf) as u8) }
+    pub fn get_SLV_DGR(&self) -> Option<DGR_65Bh_SLV_DGR> {  DGR_65Bh_SLV_DGR::try_from((self.0 >> 60 & 0xf) as u8).ok() }
         
     /// Sets DGR OK
 
@@ -802,21 +802,21 @@ impl DGR_65B {
     pub fn set_GMAX_DGR(&mut self, value: DGR_65Bh_GMAX_DGR){ self.0 = (self.0 & 0xffffffffffffc7ff) | ((value as u64) & 0x7) << 11; }
 
     /// Gets Target gear upper limit
-    pub fn get_GMAX_DGR(&self) -> std::result::Result<DGR_65Bh_GMAX_DGR, ()> { return DGR_65Bh_GMAX_DGR::try_from((self.0 >> 11 & 0x7) as u8) }
+    pub fn get_GMAX_DGR(&self) -> Option<DGR_65Bh_GMAX_DGR> {  DGR_65Bh_GMAX_DGR::try_from((self.0 >> 11 & 0x7) as u8).ok() }
         
     /// Sets Target gear lower limit
 
     pub fn set_GMIN_DGR(&mut self, value: DGR_65Bh_GMIN_DGR){ self.0 = (self.0 & 0xfffffffffffff8ff) | ((value as u64) & 0x7) << 8; }
 
     /// Gets Target gear lower limit
-    pub fn get_GMIN_DGR(&self) -> std::result::Result<DGR_65Bh_GMIN_DGR, ()> { return DGR_65Bh_GMIN_DGR::try_from((self.0 >> 8 & 0x7) as u8) }
+    pub fn get_GMIN_DGR(&self) -> Option<DGR_65Bh_GMIN_DGR> {  DGR_65Bh_GMIN_DGR::try_from((self.0 >> 8 & 0x7) as u8).ok() }
         
     /// Sets CRC checksum byte 1-7 according to SAE J1850. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_CRC_DGR_65Bh(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_CRC_DGR_65Bh(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets CRC checksum byte 1-7 according to SAE J1850. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_CRC_DGR_65Bh(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_CRC_DGR_65Bh(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -839,14 +839,14 @@ impl CONFIG_6FF {
     pub fn set_LL_RLC(&mut self, value: CONFIG_6FFh_LL_RLC){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets Left Hand Drive/Right Hand Drive
-    pub fn get_LL_RLC(&self) -> std::result::Result<CONFIG_6FFh_LL_RLC, ()> { return CONFIG_6FFh_LL_RLC::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_LL_RLC(&self) -> Option<CONFIG_6FFh_LL_RLC> {  CONFIG_6FFh_LL_RLC::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets country code
 
     pub fn set_LDC(&mut self, value: CONFIG_6FFh_LDC){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets country code
-    pub fn get_LDC(&self) -> std::result::Result<CONFIG_6FFh_LDC, ()> { return CONFIG_6FFh_LDC::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_LDC(&self) -> Option<CONFIG_6FFh_LDC> {  CONFIG_6FFh_LDC::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Special Protection Guard B6/7
 
@@ -867,14 +867,14 @@ impl CONFIG_6FF {
     pub fn set_VER_JAHR(&mut self, value: CONFIG_6FFh_VER_JAHR){ self.0 = (self.0 & 0xffff83ffffffffff) | ((value as u64) & 0x1f) << 42; }
 
     /// Gets year
-    pub fn get_VER_JAHR(&self) -> std::result::Result<CONFIG_6FFh_VER_JAHR, ()> { return CONFIG_6FFh_VER_JAHR::try_from((self.0 >> 42 & 0x1f) as u8) }
+    pub fn get_VER_JAHR(&self) -> Option<CONFIG_6FFh_VER_JAHR> {  CONFIG_6FFh_VER_JAHR::try_from((self.0 >> 42 & 0x1f) as u8).ok() }
         
     /// Sets Year of change
 
     pub fn set_VER_AE(&mut self, value: CONFIG_6FFh_VER_AE){ self.0 = (self.0 & 0xfffffcffffffffff) | ((value as u64) & 0x3) << 40; }
 
     /// Gets Year of change
-    pub fn get_VER_AE(&self) -> std::result::Result<CONFIG_6FFh_VER_AE, ()> { return CONFIG_6FFh_VER_AE::try_from((self.0 >> 40 & 0x3) as u8) }
+    pub fn get_VER_AE(&self) -> Option<CONFIG_6FFh_VER_AE> {  CONFIG_6FFh_VER_AE::try_from((self.0 >> 40 & 0x3) as u8).ok() }
         
     /// Sets air conditioning available
 

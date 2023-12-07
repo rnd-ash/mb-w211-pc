@@ -91,14 +91,14 @@ impl FDSVL_A1 {
     pub fn set_FDSVL_STAT(&mut self, value: FDSVL_A1_FDSVL_STAT){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets FDSVL status
-    pub fn get_FDSVL_STAT(&self) -> std::result::Result<FDSVL_A1_FDSVL_STAT, ()> { return FDSVL_A1_FDSVL_STAT::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_FDSVL_STAT(&self) -> Option<FDSVL_A1_FDSVL_STAT> {  FDSVL_A1_FDSVL_STAT::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets FDS pump request
 
     pub fn set_PFDS_ANF_VL(&mut self, value: FDSVL_A1_PFDS_ANF_VL){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets FDS pump request
-    pub fn get_PFDS_ANF_VL(&self) -> std::result::Result<FDSVL_A1_PFDS_ANF_VL, ()> { return FDSVL_A1_PFDS_ANF_VL::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_PFDS_ANF_VL(&self) -> Option<FDSVL_A1_PFDS_ANF_VL> {  FDSVL_A1_PFDS_ANF_VL::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

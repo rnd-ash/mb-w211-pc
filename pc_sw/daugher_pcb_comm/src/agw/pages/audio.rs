@@ -1,13 +1,6 @@
-use crate::agw::{build_agw_packet_checksum_in_place, IcText, PageTxData, TextFmtFlags};
-use futures::StreamExt;
-use std::borrow::BorrowMut;
-use std::slice::Chunks;
-use std::sync::atomic::AtomicBool;
-use std::sync::{mpsc, Arc, RwLock};
-use tokio::count;
+use crate::agw::{build_agw_packet_checksum_in_place, IcText, TextFmtFlags};
 use tokio::time::Instant;
-
-use super::{AgwPageFsm, KombiAck};
+use super::AgwPageFsm;
 
 pub struct AudioPage {
     last_rotate_time: Instant,
@@ -79,7 +72,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
         "AUDIO"
     }
 
-    fn build_pkg_20(&self, state: &AudioPageState) -> Vec<u8> {
+    fn build_pkg_20(&self, _state: &AudioPageState) -> Vec<u8> {
         vec![0x03, 0x20, 0x02, 0x11, 0xC3]
     }
 

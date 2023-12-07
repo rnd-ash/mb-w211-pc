@@ -201,7 +201,7 @@ impl EZS_240 {
     pub fn set_LL_RLC(&mut self, value: EZS_240h_LL_RLC){ self.0 = (self.0 & 0xffcfffffffffffff) | ((value as u64) & 0x3) << 52; }
 
     /// Gets Left Hand Drive/Right Hand Drive
-    pub fn get_LL_RLC(&self) -> std::result::Result<EZS_240h_LL_RLC, ()> { return EZS_240h_LL_RLC::try_from((self.0 >> 52 & 0x3) as u8) }
+    pub fn get_LL_RLC(&self) -> Option<EZS_240h_LL_RLC> {  EZS_240h_LL_RLC::try_from((self.0 >> 52 & 0x3) as u8).ok() }
         
     /// Sets reverse gear engaged (manual gearbox only)
 
@@ -299,7 +299,7 @@ impl EZS_240 {
     pub fn set_ESP_BET(&mut self, value: EZS_240h_ESP_BET){ self.0 = (self.0 & 0xffffffff9fffffff) | ((value as u64) & 0x3) << 29; }
 
     /// Gets ESP on/off actuated
-    pub fn get_ESP_BET(&self) -> std::result::Result<EZS_240h_ESP_BET, ()> { return EZS_240h_ESP_BET::try_from((self.0 >> 29 & 0x3) as u8) }
+    pub fn get_ESP_BET(&self) -> Option<EZS_240h_ESP_BET> {  EZS_240h_ESP_BET::try_from((self.0 >> 29 & 0x3) as u8).ok() }
         
     /// Sets Handbrake applied (indicator lamp)
 
@@ -334,21 +334,21 @@ impl EZS_240 {
     pub fn set_ST2_BET(&mut self, value: EZS_240h_ST2_BET){ self.0 = (self.0 & 0xffffffffff3fffff) | ((value as u64) & 0x3) << 22; }
 
     /// Gets LF/ABC 2-position switch actuated
-    pub fn get_ST2_BET(&self) -> std::result::Result<EZS_240h_ST2_BET, ()> { return EZS_240h_ST2_BET::try_from((self.0 >> 22 & 0x3) as u8) }
+    pub fn get_ST2_BET(&self) -> Option<EZS_240h_ST2_BET> {  EZS_240h_ST2_BET::try_from((self.0 >> 22 & 0x3) as u8).ok() }
         
     /// Sets LF/ABC 3-position switch operated
 
     pub fn set_ST3_BET(&mut self, value: EZS_240h_ST3_BET){ self.0 = (self.0 & 0xffffffffffcfffff) | ((value as u64) & 0x3) << 20; }
 
     /// Gets LF/ABC 3-position switch operated
-    pub fn get_ST3_BET(&self) -> std::result::Result<EZS_240h_ST3_BET, ()> { return EZS_240h_ST3_BET::try_from((self.0 >> 20 & 0x3) as u8) }
+    pub fn get_ST3_BET(&self) -> Option<EZS_240h_ST3_BET> {  EZS_240h_ST3_BET::try_from((self.0 >> 20 & 0x3) as u8).ok() }
         
     /// Sets ART distance warning on/off actuated
 
     pub fn set_ART_ABW_BET(&mut self, value: EZS_240h_ART_ABW_BET){ self.0 = (self.0 & 0xfffffffffff3ffff) | ((value as u64) & 0x3) << 18; }
 
     /// Gets ART distance warning on/off actuated
-    pub fn get_ART_ABW_BET(&self) -> std::result::Result<EZS_240h_ART_ABW_BET, ()> { return EZS_240h_ART_ABW_BET::try_from((self.0 >> 18 & 0x3) as u8) }
+    pub fn get_ART_ABW_BET(&self) -> Option<EZS_240h_ART_ABW_BET> {  EZS_240h_ART_ABW_BET::try_from((self.0 >> 18 & 0x3) as u8).ok() }
         
     /// Sets Turn on low beam
 
@@ -390,13 +390,13 @@ impl EZS_240 {
     pub fn set_FZGVERSN(&mut self, value: EZS_240h_FZGVERSN){ self.0 = (self.0 & 0xffffffffffffffe3) | ((value as u64) & 0x7) << 2; }
 
     /// Gets Series-dependent vehicle version (only 220/215/230)
-    pub fn get_FZGVERSN(&self) -> std::result::Result<EZS_240h_FZGVERSN, ()> { return EZS_240h_FZGVERSN::try_from((self.0 >> 2 & 0x7) as u8) }
+    pub fn get_FZGVERSN(&self) -> Option<EZS_240h_FZGVERSN> {  EZS_240h_FZGVERSN::try_from((self.0 >> 2 & 0x7) as u8).ok() }
         
     /// Sets country code
 
-    pub fn set_LDC(&mut self, value: EZS_240h_LDC){ self.0 = (self.0 & 0xfffffffffffffffc) | ((value as u64) & 0x3) << 0; }
+    pub fn set_LDC(&mut self, value: EZS_240h_LDC){ self.0 = (self.0 & 0xfffffffffffffffc) | ((value as u64) & 0x3); }
 
     /// Gets country code
-    pub fn get_LDC(&self) -> std::result::Result<EZS_240h_LDC, ()> { return EZS_240h_LDC::try_from((self.0 >> 0 & 0x3) as u8) }
+    pub fn get_LDC(&self) -> Option<EZS_240h_LDC> {  EZS_240h_LDC::try_from((self.0 & 0x3) as u8).ok() }
         
 }

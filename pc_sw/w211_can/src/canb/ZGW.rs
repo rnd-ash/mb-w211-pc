@@ -850,21 +850,21 @@ impl ZGW_A4 {
     pub fn set_SV_WARN(&mut self, value: ZGW_A4_SV_WARN){ self.0 = (self.0 & 0xcfffffffffffffff) | ((value as u64) & 0x3) << 60; }
 
     /// Gets Status Service Warning
-    pub fn get_SV_WARN(&self) -> std::result::Result<ZGW_A4_SV_WARN, ()> { return ZGW_A4_SV_WARN::try_from((self.0 >> 60 & 0x3) as u8) }
+    pub fn get_SV_WARN(&self) -> Option<ZGW_A4_SV_WARN> {  ZGW_A4_SV_WARN::try_from((self.0 >> 60 & 0x3) as u8).ok() }
         
     /// Sets display mode
 
     pub fn set_SV_ANZ_MOD(&mut self, value: ZGW_A4_SV_ANZ_MOD){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets display mode
-    pub fn get_SV_ANZ_MOD(&self) -> std::result::Result<ZGW_A4_SV_ANZ_MOD, ()> { return ZGW_A4_SV_ANZ_MOD::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_SV_ANZ_MOD(&self) -> Option<ZGW_A4_SV_ANZ_MOD> {  ZGW_A4_SV_ANZ_MOD::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets scope of service
 
     pub fn set_SV_UMFANG(&mut self, value: ZGW_A4_SV_UMFANG){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets scope of service
-    pub fn get_SV_UMFANG(&self) -> std::result::Result<ZGW_A4_SV_UMFANG, ()> { return ZGW_A4_SV_UMFANG::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_SV_UMFANG(&self) -> Option<ZGW_A4_SV_UMFANG> {  ZGW_A4_SV_UMFANG::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Service value. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: ASCII)
 
@@ -896,10 +896,10 @@ impl ZGW_A4 {
         
     /// Sets remaining distance. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: km(miles))
 
-    pub fn set_REST_WEG(&mut self, value: u32){ self.0 = (self.0 & 0xffffffffff000000) | ((value as u64) & 0xffffff) << 0; }
+    pub fn set_REST_WEG(&mut self, value: u32){ self.0 = (self.0 & 0xffffffffff000000) | ((value as u64) & 0xffffff); }
 
     /// Gets remaining distance. Conversion formula (To real from raw): y=(1.00x)+0.0 (Unit: km(miles))
-    pub fn get_REST_WEG(&self) -> u32 { (self.0 >> 0 & 0xffffff) as u32 }
+    pub fn get_REST_WEG(&self) -> u32 { (self.0 & 0xffffff) as u32 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -915,14 +915,14 @@ impl ZGW_A5 {
     pub fn set_LAND(&mut self, value: ZGW_A5_LAND){ self.0 = (self.0 & 0x0fffffffffffffff) | ((value as u64) & 0xf) << 60; }
 
     /// Gets Country specific SA coding
-    pub fn get_LAND(&self) -> std::result::Result<ZGW_A5_LAND, ()> { return ZGW_A5_LAND::try_from((self.0 >> 60 & 0xf) as u8) }
+    pub fn get_LAND(&self) -> Option<ZGW_A5_LAND> {  ZGW_A5_LAND::try_from((self.0 >> 60 & 0xf) as u8).ok() }
         
     /// Sets Left/Right Hand Drive
 
     pub fn set_LL_RL(&mut self, value: ZGW_A5_LL_RL){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets Left/Right Hand Drive
-    pub fn get_LL_RL(&self) -> std::result::Result<ZGW_A5_LL_RL, ()> { return ZGW_A5_LL_RL::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_LL_RL(&self) -> Option<ZGW_A5_LL_RL> {  ZGW_A5_LL_RL::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Special Protection Guard B4
 
@@ -1020,14 +1020,14 @@ impl ZGW_A5 {
     pub fn set_FCOD_KAR(&mut self, value: ZGW_A5_FCOD_KAR){ self.0 = (self.0 & 0xffffff1fffffffff) | ((value as u64) & 0x7) << 37; }
 
     /// Gets vehicle code body
-    pub fn get_FCOD_KAR(&self) -> std::result::Result<ZGW_A5_FCOD_KAR, ()> { return ZGW_A5_FCOD_KAR::try_from((self.0 >> 37 & 0x7) as u8) }
+    pub fn get_FCOD_KAR(&self) -> Option<ZGW_A5_FCOD_KAR> {  ZGW_A5_FCOD_KAR::try_from((self.0 >> 37 & 0x7) as u8).ok() }
         
     /// Sets vehicle code series
 
     pub fn set_FCOD_BR(&mut self, value: ZGW_A5_FCOD_BR){ self.0 = (self.0 & 0xffffffe0ffffffff) | ((value as u64) & 0x1f) << 32; }
 
     /// Gets vehicle code series
-    pub fn get_FCOD_BR(&self) -> std::result::Result<ZGW_A5_FCOD_BR, ()> { return ZGW_A5_FCOD_BR::try_from((self.0 >> 32 & 0x1f) as u8) }
+    pub fn get_FCOD_BR(&self) -> Option<ZGW_A5_FCOD_BR> {  ZGW_A5_FCOD_BR::try_from((self.0 >> 32 & 0x1f) as u8).ok() }
         
     /// Sets Flat roll warning available
 
@@ -1041,7 +1041,7 @@ impl ZGW_A5 {
     pub fn set_FCOD_MOT(&mut self, value: ZGW_A5_FCOD_MOT){ self.0 = (self.0 & 0xffffffffc0ffffff) | ((value as u64) & 0x3f) << 24; }
 
     /// Gets Vehicle code engine
-    pub fn get_FCOD_MOT(&self) -> std::result::Result<ZGW_A5_FCOD_MOT, ()> { return ZGW_A5_FCOD_MOT::try_from((self.0 >> 24 & 0x3f) as u8) }
+    pub fn get_FCOD_MOT(&self) -> Option<ZGW_A5_FCOD_MOT> {  ZGW_A5_FCOD_MOT::try_from((self.0 >> 24 & 0x3f) as u8).ok() }
         
     /// Sets Xenon light present
 
@@ -1178,10 +1178,10 @@ impl ZGW_A5 {
         
     /// Sets washer fluid hose heating RL or C490 [0], LL or C875 [1]
 
-    pub fn set_WWSH_VH(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_WWSH_VH(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets washer fluid hose heating RL or C490 [0], LL or C875 [1]
-    pub fn get_WWSH_VH(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_WWSH_VH(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1197,14 +1197,14 @@ impl ZGW_A6 {
     pub fn set_VER_JAHR(&mut self, value: ZGW_A6_VER_JAHR){ self.0 = (self.0 & 0x83ffffffffffffff) | ((value as u64) & 0x1f) << 58; }
 
     /// Gets year
-    pub fn get_VER_JAHR(&self) -> std::result::Result<ZGW_A6_VER_JAHR, ()> { return ZGW_A6_VER_JAHR::try_from((self.0 >> 58 & 0x1f) as u8) }
+    pub fn get_VER_JAHR(&self) -> Option<ZGW_A6_VER_JAHR> {  ZGW_A6_VER_JAHR::try_from((self.0 >> 58 & 0x1f) as u8).ok() }
         
     /// Sets Year of change
 
     pub fn set_VER_AE(&mut self, value: ZGW_A6_VER_AE){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets Year of change
-    pub fn get_VER_AE(&self) -> std::result::Result<ZGW_A6_VER_AE, ()> { return ZGW_A6_VER_AE::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_VER_AE(&self) -> Option<ZGW_A6_VER_AE> {  ZGW_A6_VER_AE::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1287,10 +1287,10 @@ impl GW_C_B1 {
         
     /// Sets oil temperature. Conversion formula (To raw from real): y=(x+40.0)/1.00 (Unit: °C)
 
-    pub fn set_T_OEL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_T_OEL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets oil temperature. Conversion formula (To real from raw): y=(1.00x)-40.0 (Unit: °C)
-    pub fn get_T_OEL(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_T_OEL(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1348,7 +1348,7 @@ impl GW_C_B2 {
     pub fn set_BLS_ST(&mut self, value: GW_C_B2_BLS_ST){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets Brake light switch status
-    pub fn get_BLS_ST(&self) -> std::result::Result<GW_C_B2_BLS_ST, ()> { return GW_C_B2_BLS_ST::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_BLS_ST(&self) -> Option<GW_C_B2_BLS_ST> {  GW_C_B2_BLS_ST::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets reverse gear engaged (all transmissions)
 
@@ -1369,21 +1369,21 @@ impl GW_C_B2 {
     pub fn set_BELADUNG(&mut self, value: GW_C_B2_BELADUNG){ self.0 = (self.0 & 0xffcfffffffffffff) | ((value as u64) & 0x3) << 52; }
 
     /// Gets loading
-    pub fn get_BELADUNG(&self) -> std::result::Result<GW_C_B2_BELADUNG, ()> { return GW_C_B2_BELADUNG::try_from((self.0 >> 52 & 0x3) as u8) }
+    pub fn get_BELADUNG(&self) -> Option<GW_C_B2_BELADUNG> {  GW_C_B2_BELADUNG::try_from((self.0 >> 52 & 0x3) as u8).ok() }
         
     /// Sets Gear selector lever position (NAG only)
 
     pub fn set_WHC(&mut self, value: GW_C_B2_WHC){ self.0 = (self.0 & 0xfff0ffffffffffff) | ((value as u64) & 0xf) << 48; }
 
     /// Gets Gear selector lever position (NAG only)
-    pub fn get_WHC(&self) -> std::result::Result<GW_C_B2_WHC, ()> { return GW_C_B2_WHC::try_from((self.0 >> 48 & 0xf) as u8) }
+    pub fn get_WHC(&self) -> Option<GW_C_B2_WHC> {  GW_C_B2_WHC::try_from((self.0 >> 48 & 0xf) as u8).ok() }
         
     /// Sets Direction of rotation of wheel, front left
 
     pub fn set_DRTGVL(&mut self, value: GW_C_B2_DRTGVL){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Direction of rotation of wheel, front left
-    pub fn get_DRTGVL(&self) -> std::result::Result<GW_C_B2_DRTGVL, ()> { return GW_C_B2_DRTGVL::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_DRTGVL(&self) -> Option<GW_C_B2_DRTGVL> {  GW_C_B2_DRTGVL::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets Front left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/0.50 (Unit: 1/min)
 
@@ -1453,7 +1453,7 @@ impl GW_C_B2 {
     pub fn set_WHST(&mut self, value: GW_C_B2_WHST){ self.0 = (self.0 & 0xffffffffff1fffff) | ((value as u64) & 0x7) << 21; }
 
     /// Gets Gear selector lever position (NAG, KSG, CVT)
-    pub fn get_WHST(&self) -> std::result::Result<GW_C_B2_WHST, ()> { return GW_C_B2_WHST::try_from((self.0 >> 21 & 0x7) as u8) }
+    pub fn get_WHST(&self) -> Option<GW_C_B2_WHST> {  GW_C_B2_WHST::try_from((self.0 >> 21 & 0x7) as u8).ok() }
         
     /// Sets Set braking torque. Conversion formula (To raw from real): y=(x-0.0)/3.00 (Unit: Nm)
 
@@ -1513,10 +1513,10 @@ impl GW_C_B2 {
         
     /// Sets Idle is stable
 
-    pub fn set_LL_STBL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_LL_STBL(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets Idle is stable
-    pub fn get_LL_STBL(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_LL_STBL(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1567,14 +1567,14 @@ impl GW_C_B3 {
     pub fn set_EHB_BN(&mut self, value: GW_C_B3_EHB_BN){ self.0 = (self.0 & 0xffffffffffffff3f) | ((value as u64) & 0x3) << 6; }
 
     /// Gets EHB vehicle electrical system status
-    pub fn get_EHB_BN(&self) -> std::result::Result<GW_C_B3_EHB_BN, ()> { return GW_C_B3_EHB_BN::try_from((self.0 >> 6 & 0x3) as u8) }
+    pub fn get_EHB_BN(&self) -> Option<GW_C_B3_EHB_BN> {  GW_C_B3_EHB_BN::try_from((self.0 >> 6 & 0x3) as u8).ok() }
         
     /// Sets Heat output status
 
     pub fn set_HZL_ST(&mut self, value: GW_C_B3_HZL_ST){ self.0 = (self.0 & 0xffffffffffffffcf) | ((value as u64) & 0x3) << 4; }
 
     /// Gets Heat output status
-    pub fn get_HZL_ST(&self) -> std::result::Result<GW_C_B3_HZL_ST, ()> { return GW_C_B3_HZL_ST::try_from((self.0 >> 4 & 0x3) as u8) }
+    pub fn get_HZL_ST(&self) -> Option<GW_C_B3_HZL_ST> {  GW_C_B3_HZL_ST::try_from((self.0 >> 4 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1597,42 +1597,42 @@ impl GW_C_B4 {
     pub fn set_PRESF_R_SVR(&mut self, value: GW_C_B4_PRESF_R_SVR){ self.0 = (self.0 & 0xf3ffffffffffffff) | ((value as u64) & 0x3) << 58; }
 
     /// Gets Presafe adjustment seat front right
-    pub fn get_PRESF_R_SVR(&self) -> std::result::Result<GW_C_B4_PRESF_R_SVR, ()> { return GW_C_B4_PRESF_R_SVR::try_from((self.0 >> 58 & 0x3) as u8) }
+    pub fn get_PRESF_R_SVR(&self) -> Option<GW_C_B4_PRESF_R_SVR> {  GW_C_B4_PRESF_R_SVR::try_from((self.0 >> 58 & 0x3) as u8).ok() }
         
     /// Sets Presafe adjustment of the front left seat
 
     pub fn set_PRESF_L_SVL(&mut self, value: GW_C_B4_PRESF_L_SVL){ self.0 = (self.0 & 0xfcffffffffffffff) | ((value as u64) & 0x3) << 56; }
 
     /// Gets Presafe adjustment of the front left seat
-    pub fn get_PRESF_L_SVL(&self) -> std::result::Result<GW_C_B4_PRESF_L_SVL, ()> { return GW_C_B4_PRESF_L_SVL::try_from((self.0 >> 56 & 0x3) as u8) }
+    pub fn get_PRESF_L_SVL(&self) -> Option<GW_C_B4_PRESF_L_SVL> {  GW_C_B4_PRESF_L_SVL::try_from((self.0 >> 56 & 0x3) as u8).ok() }
         
     /// Sets Presafe adjustment window front right
 
     pub fn set_PRESF_R_FH(&mut self, value: GW_C_B4_PRESF_R_FH){ self.0 = (self.0 & 0xff3fffffffffffff) | ((value as u64) & 0x3) << 54; }
 
     /// Gets Presafe adjustment window front right
-    pub fn get_PRESF_R_FH(&self) -> std::result::Result<GW_C_B4_PRESF_R_FH, ()> { return GW_C_B4_PRESF_R_FH::try_from((self.0 >> 54 & 0x3) as u8) }
+    pub fn get_PRESF_R_FH(&self) -> Option<GW_C_B4_PRESF_R_FH> {  GW_C_B4_PRESF_R_FH::try_from((self.0 >> 54 & 0x3) as u8).ok() }
         
     /// Sets Presafe adjustment window front left
 
     pub fn set_PRESF_L_FH(&mut self, value: GW_C_B4_PRESF_L_FH){ self.0 = (self.0 & 0xffcfffffffffffff) | ((value as u64) & 0x3) << 52; }
 
     /// Gets Presafe adjustment window front left
-    pub fn get_PRESF_L_FH(&self) -> std::result::Result<GW_C_B4_PRESF_L_FH, ()> { return GW_C_B4_PRESF_L_FH::try_from((self.0 >> 52 & 0x3) as u8) }
+    pub fn get_PRESF_L_FH(&self) -> Option<GW_C_B4_PRESF_L_FH> {  GW_C_B4_PRESF_L_FH::try_from((self.0 >> 52 & 0x3) as u8).ok() }
         
     /// Sets Presafe sliding/tilting sunroof adjustment
 
     pub fn set_PRESF_R_SHD(&mut self, value: GW_C_B4_PRESF_R_SHD){ self.0 = (self.0 & 0xfff3ffffffffffff) | ((value as u64) & 0x3) << 50; }
 
     /// Gets Presafe sliding/tilting sunroof adjustment
-    pub fn get_PRESF_R_SHD(&self) -> std::result::Result<GW_C_B4_PRESF_R_SHD, ()> { return GW_C_B4_PRESF_R_SHD::try_from((self.0 >> 50 & 0x3) as u8) }
+    pub fn get_PRESF_R_SHD(&self) -> Option<GW_C_B4_PRESF_R_SHD> {  GW_C_B4_PRESF_R_SHD::try_from((self.0 >> 50 & 0x3) as u8).ok() }
         
     /// Sets Presafe sliding/tilting sunroof adjustment
 
     pub fn set_PRESF_L_SHD(&mut self, value: GW_C_B4_PRESF_L_SHD){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Presafe sliding/tilting sunroof adjustment
-    pub fn get_PRESF_L_SHD(&self) -> std::result::Result<GW_C_B4_PRESF_L_SHD, ()> { return GW_C_B4_PRESF_L_SHD::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_PRESF_L_SHD(&self) -> Option<GW_C_B4_PRESF_L_SHD> {  GW_C_B4_PRESF_L_SHD::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1662,7 +1662,7 @@ impl GW_C_B5 {
     pub fn set_DRTGHR(&mut self, value: GW_C_B5_DRTGHR){ self.0 = (self.0 & 0xffff3fffffffffff) | ((value as u64) & 0x3) << 46; }
 
     /// Gets Direction of rotation of rear wheel to the right
-    pub fn get_DRTGHR(&self) -> std::result::Result<GW_C_B5_DRTGHR, ()> { return GW_C_B5_DRTGHR::try_from((self.0 >> 46 & 0x3) as u8) }
+    pub fn get_DRTGHR(&self) -> Option<GW_C_B5_DRTGHR> {  GW_C_B5_DRTGHR::try_from((self.0 >> 46 & 0x3) as u8).ok() }
         
     /// Sets Rear right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/0.50 (Unit: 1/min)
 
@@ -1676,7 +1676,7 @@ impl GW_C_B5 {
     pub fn set_DRTGHL(&mut self, value: GW_C_B5_DRTGHL){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Direction of rotation of rear left wheel
-    pub fn get_DRTGHL(&self) -> std::result::Result<GW_C_B5_DRTGHL, ()> { return GW_C_B5_DRTGHL::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_DRTGHL(&self) -> Option<GW_C_B5_DRTGHL> {  GW_C_B5_DRTGHL::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets Rear left wheel speed. Conversion formula (To raw from real): y=(x-0.0)/0.50 (Unit: 1/min)
 
@@ -1706,7 +1706,7 @@ impl GW_C_B7 {
     pub fn set_DRTGVR(&mut self, value: GW_C_B7_DRTGVR){ self.0 = (self.0 & 0xffffffff3fffffff) | ((value as u64) & 0x3) << 30; }
 
     /// Gets Direction of rotation of wheel, front right
-    pub fn get_DRTGVR(&self) -> std::result::Result<GW_C_B7_DRTGVR, ()> { return GW_C_B7_DRTGVR::try_from((self.0 >> 30 & 0x3) as u8) }
+    pub fn get_DRTGVR(&self) -> Option<GW_C_B7_DRTGVR> {  GW_C_B7_DRTGVR::try_from((self.0 >> 30 & 0x3) as u8).ok() }
         
     /// Sets front right wheel speed. Conversion formula (To raw from real): y=(x-0.0)/0.50 (Unit: 1/min)
 

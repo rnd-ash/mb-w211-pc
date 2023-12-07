@@ -469,14 +469,14 @@ impl GS_218 {
     pub fn set_GZC(&mut self, value: GS_218h_GZC){ self.0 = (self.0 & 0xffff0fffffffffff) | ((value as u64) & 0xf) << 44; }
 
     /// Gets target gear
-    pub fn get_GZC(&self) -> std::result::Result<GS_218h_GZC, ()> { return GS_218h_GZC::try_from((self.0 >> 44 & 0xf) as u8) }
+    pub fn get_GZC(&self) -> Option<GS_218h_GZC> {  GS_218h_GZC::try_from((self.0 >> 44 & 0xf) as u8).ok() }
         
     /// Sets actual gear
 
     pub fn set_GIC(&mut self, value: GS_218h_GIC){ self.0 = (self.0 & 0xfffff0ffffffffff) | ((value as u64) & 0xf) << 40; }
 
     /// Gets actual gear
-    pub fn get_GIC(&self) -> std::result::Result<GS_218h_GIC, ()> { return GS_218h_GIC::try_from((self.0 >> 40 & 0xf) as u8) }
+    pub fn get_GIC(&self) -> Option<GS_218h_GIC> {  GS_218h_GIC::try_from((self.0 >> 40 & 0xf) as u8).ok() }
         
     /// Sets Cons. (converter lockup) clutch "slip"
 
@@ -581,7 +581,7 @@ impl GS_218 {
     pub fn set_FPC_AAD(&mut self, value: GS_218h_FPC_AAD){ self.0 = (self.0 & 0xfffffffffcffffff) | ((value as u64) & 0x3) << 24; }
 
     /// Gets Driving program for AAD
-    pub fn get_FPC_AAD(&self) -> std::result::Result<GS_218h_FPC_AAD, ()> { return GS_218h_FPC_AAD::try_from((self.0 >> 24 & 0x3) as u8) }
+    pub fn get_FPC_AAD(&self) -> Option<GS_218h_FPC_AAD> {  GS_218h_FPC_AAD::try_from((self.0 >> 24 & 0x3) as u8).ok() }
         
     /// Sets Engine torque request parity (even parity)
 
@@ -637,7 +637,7 @@ impl GS_218 {
     pub fn set_FEHLPRF_ST(&mut self, value: GS_218h_FEHLPRF_ST){ self.0 = (self.0 & 0xffffffffffffff3f) | ((value as u64) & 0x3) << 6; }
 
     /// Gets Error check status
-    pub fn get_FEHLPRF_ST(&self) -> std::result::Result<GS_218h_FEHLPRF_ST, ()> { return GS_218h_FEHLPRF_ST::try_from((self.0 >> 6 & 0x3) as u8) }
+    pub fn get_FEHLPRF_ST(&self) -> Option<GS_218h_FEHLPRF_ST> {  GS_218h_FEHLPRF_ST::try_from((self.0 >> 6 & 0x3) as u8).ok() }
         
     /// Sets CALID/CVN transfer active
 
@@ -648,10 +648,10 @@ impl GS_218 {
         
     /// Sets Error number or counter for CALID/CVN transmission. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_FEHLER(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffffe0) | ((value as u64) & 0x1f) << 0; }
+    pub fn set_FEHLER(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffffe0) | ((value as u64) & 0x1f); }
 
     /// Gets Error number or counter for CALID/CVN transmission. Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_FEHLER(&self) -> u8 { (self.0 >> 0 & 0x1f) as u8 }
+    pub fn get_FEHLER(&self) -> u8 { (self.0 & 0x1f) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -671,10 +671,10 @@ impl GS_338 {
         
     /// Sets Turbine speed (EGS52-NAG, VGS-NAG2). Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_NTURBINE(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff) << 0; }
+    pub fn set_NTURBINE(&mut self, value: u16){ self.0 = (self.0 & 0xffffffffffff0000) | ((value as u64) & 0xffff); }
 
     /// Gets Turbine speed (EGS52-NAG, VGS-NAG2). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_NTURBINE(&self) -> u16 { (self.0 >> 0 & 0xffff) as u16 }
+    pub fn get_NTURBINE(&self) -> u16 { (self.0 & 0xffff) as u16 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -690,14 +690,14 @@ impl GS_418 {
     pub fn set_FSC(&mut self, value: GS_418h_FSC){ self.0 = (self.0 & 0x00ffffffffffffff) | ((value as u64) & 0xff) << 56; }
 
     /// Gets speed level
-    pub fn get_FSC(&self) -> std::result::Result<GS_418h_FSC, ()> { return GS_418h_FSC::try_from((self.0 >> 56 & 0xff) as u8) }
+    pub fn get_FSC(&self) -> Option<GS_418h_FSC> {  GS_418h_FSC::try_from((self.0 >> 56 & 0xff) as u8).ok() }
         
     /// Sets Driving program
 
     pub fn set_FPC(&mut self, value: GS_418h_FPC){ self.0 = (self.0 & 0xff00ffffffffffff) | ((value as u64) & 0xff) << 48; }
 
     /// Gets Driving program
-    pub fn get_FPC(&self) -> std::result::Result<GS_418h_FPC, ()> { return GS_418h_FPC::try_from((self.0 >> 48 & 0xff) as u8) }
+    pub fn get_FPC(&self) -> Option<GS_418h_FPC> {  GS_418h_FPC::try_from((self.0 >> 48 & 0xff) as u8).ok() }
         
     /// Sets Transmission oil temperature. Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -739,7 +739,7 @@ impl GS_418 {
     pub fn set_MECH(&mut self, value: GS_418h_MECH){ self.0 = (self.0 & 0xfffffff3ffffffff) | ((value as u64) & 0x3) << 34; }
 
     /// Gets Transmission mechanical variant
-    pub fn get_MECH(&self) -> std::result::Result<GS_418h_MECH, ()> { return GS_418h_MECH::try_from((self.0 >> 34 & 0x3) as u8) }
+    pub fn get_MECH(&self) -> Option<GS_418h_MECH> {  GS_418h_MECH::try_from((self.0 >> 34 & 0x3) as u8).ok() }
         
     /// Sets Apply the brake when switching on
 
@@ -760,14 +760,14 @@ impl GS_418 {
     pub fn set_GZC(&mut self, value: GS_418h_GZC){ self.0 = (self.0 & 0xffffffff0fffffff) | ((value as u64) & 0xf) << 28; }
 
     /// Gets target gear
-    pub fn get_GZC(&self) -> std::result::Result<GS_418h_GZC, ()> { return GS_418h_GZC::try_from((self.0 >> 28 & 0xf) as u8) }
+    pub fn get_GZC(&self) -> Option<GS_418h_GZC> {  GS_418h_GZC::try_from((self.0 >> 28 & 0xf) as u8).ok() }
         
     /// Sets actual gear
 
     pub fn set_GIC(&mut self, value: GS_418h_GIC){ self.0 = (self.0 & 0xfffffffff0ffffff) | ((value as u64) & 0xf) << 24; }
 
     /// Gets actual gear
-    pub fn get_GIC(&self) -> std::result::Result<GS_418h_GIC, ()> { return GS_418h_GIC::try_from((self.0 >> 24 & 0xf) as u8) }
+    pub fn get_GIC(&self) -> Option<GS_418h_GIC> {  GS_418h_GIC::try_from((self.0 >> 24 & 0xf) as u8).ok() }
         
     /// Sets Torque loss (FFh at KSG). Conversion formula (To raw from real): y=(x-0.0)/1.00
 
@@ -795,13 +795,13 @@ impl GS_418 {
     pub fn set_WHST(&mut self, value: GS_418h_WHST){ self.0 = (self.0 & 0xffffffffffffc7ff) | ((value as u64) & 0x7) << 11; }
 
     /// Gets Gear selector lever position (NAG, KSG, CVT)
-    pub fn get_WHST(&self) -> std::result::Result<GS_418h_WHST, ()> { return GS_418h_WHST::try_from((self.0 >> 11 & 0x7) as u8) }
+    pub fn get_WHST(&self) -> Option<GS_418h_WHST> {  GS_418h_WHST::try_from((self.0 >> 11 & 0x7) as u8).ok() }
         
     /// Sets Wheel torque factor (7FFh with KSG). Conversion formula (To raw from real): y=(x-0.0)/1.00
 
-    pub fn set_FMRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffff800) | ((value as u64) & 0x7ff) << 0; }
+    pub fn set_FMRAD(&mut self, value: u16){ self.0 = (self.0 & 0xfffffffffffff800) | ((value as u64) & 0x7ff); }
 
     /// Gets Wheel torque factor (7FFh with KSG). Conversion formula (To real from raw): y=(1.00x)+0.0
-    pub fn get_FMRAD(&self) -> u16 { (self.0 >> 0 & 0x7ff) as u16 }
+    pub fn get_FMRAD(&self) -> u16 { (self.0 & 0x7ff) as u16 }
         
 }

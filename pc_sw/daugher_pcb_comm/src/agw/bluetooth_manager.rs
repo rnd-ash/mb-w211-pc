@@ -1,19 +1,16 @@
 use crate::agw::{AgwCommand, AudioPageState, AudioSymbol, IcText, TextFmtFlags};
-use ::futures::{pin_mut, stream::SelectAll, StreamExt};
-use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
+
+use bluer::Device;
 use dbus::arg::{PropMap, RefArg};
 use dbus::blocking::stdintf::org_freedesktop_dbus::Properties;
-use dbus::{blocking::Connection, channel::MatchingReceiver, message::MatchRule, Error, Message};
-use tokio::{task, time};
+use dbus::{blocking::Connection, message::MatchRule, Error};
+
 use std::sync::mpsc::{Sender, self};
 use std::sync::{Arc, RwLock};
-use std::{future, time::Duration};
-use tokio::sync::futures;
+use std::time::Duration;
+
 
 const SERVICE: &str = "org.bluez";
-const PATH: &str = "/org/bluez";
-const INTERFACE: &str = "org.bluez.Adapter1";
-const ADAPTER: &str = "hci0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BtCommand {
@@ -34,7 +31,7 @@ impl BluetoothManager {
 
         let (sender_bt, receiver_bt) = mpsc::channel::<BtCommand>();
         std::thread::spawn(move || {
-            let BT_IDLE_STATE: AudioPageState = AudioPageState {
+            let bt_idle_state: AudioPageState = AudioPageState {
                 header_text: IcText {
                     format: TextFmtFlags::LEFT,
                     text: "Bluetooth".to_string(),
@@ -61,9 +58,9 @@ impl BluetoothManager {
                 }
             });
             log::info!("Bluetooth now up!");
-            sender.send(AgwCommand::SetAudioPage(BT_IDLE_STATE.clone()));
+            let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
             let connection = Connection::new_system().unwrap();
-            let mut rule = MatchRule::new();
+            let _rule = MatchRule::new();
             let mut dev_name: Option<String> = None;
             let mut track_name: Option<String> = None;
             loop {
@@ -84,10 +81,10 @@ impl BluetoothManager {
                     log::info!("Now connected to {:?}", dev_name);
                     if connected_device_t.read().unwrap().is_some() != dev_name.is_some() {
                         if dev_name.is_none() {
-                            sender.send(AgwCommand::SetAudioPage(BT_IDLE_STATE.clone()));
+                            let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
                             track_name = None;
                         } else {
-                            sender.send(AgwCommand::SetAudioPage(AudioPageState {
+                            let _ = sender.send(AgwCommand::SetAudioPage(AudioPageState {
                                 header_text: IcText {
                                     format: TextFmtFlags::LEFT,
                                     text: "Bluetooth".to_string(),
@@ -102,10 +99,10 @@ impl BluetoothManager {
                         }
                     } else {
                         if dev_name.is_none() {
-                            sender.send(AgwCommand::SetAudioPage(BT_IDLE_STATE.clone()));
+                            let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
                         } else {
                             // Just device name changed
-                            sender.send(AgwCommand::SetAudioBodyText(IcText {
+                            let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
                                 format: TextFmtFlags::CENTER,
                                 text: format!("Connected to {}", dev_name.clone().unwrap()),
                             }));
@@ -114,14 +111,15 @@ impl BluetoothManager {
 
                     *connected_device_t.write().unwrap() = dev_name.clone();
 
-                    sender.send(AgwCommand::SetAudioBodyText(IcText {
+                    let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
                         format: TextFmtFlags::CENTER,
                         text: dev_name.clone().unwrap_or_else(|| "No device".to_string()),
-                    }));
-                    sender.send(AgwCommand::SetAudioSymbols(
-                        AudioSymbol::None,
-                        AudioSymbol::None,
-                    ));
+                    })).and_then(|_| {
+                        sender.send(AgwCommand::SetAudioSymbols(
+                            AudioSymbol::None,
+                            AudioSymbol::None,
+                        ))
+                    });
                 }
                 if let Some(device) = dev {
                     let addr = device.address().to_string().replace(":", "_");
@@ -138,23 +136,24 @@ impl BluetoothManager {
                                 track_name = t;
                                 let name = track_name.clone().unwrap();
                                 println!("New track {}", name);
-                                sender.send(AgwCommand::SetAudioBodyText(IcText {
+                                let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
                                     format: TextFmtFlags::CENTER,
                                     text: name.clone(),
-                                }));
-                                
-                                sender.send(AgwCommand::TrackUpdate(name.clone()));
-                                if name.is_empty() {
-                                    sender.send(AgwCommand::SetAudioSymbols(
-                                        AudioSymbol::None,
-                                        AudioSymbol::None,
-                                    ));
-                                } else {
-                                    sender.send(AgwCommand::SetAudioSymbols(
-                                        AudioSymbol::Up,
-                                        AudioSymbol::Down,
-                                    ));
-                                }
+                                })).and_then(|_| {
+                                    sender.send(AgwCommand::TrackUpdate(name.clone()))
+                                }).and_then(|_| {
+                                    if name.is_empty() {
+                                        sender.send(AgwCommand::SetAudioSymbols(
+                                            AudioSymbol::None,
+                                            AudioSymbol::None,
+                                        ))
+                                    } else {
+                                        sender.send(AgwCommand::SetAudioSymbols(
+                                            AudioSymbol::Up,
+                                            AudioSymbol::Down,
+                                        ))
+                                    }
+                                });
                             }
                         }
                         if let Ok(cmd) = receiver_bt.try_recv() {
@@ -180,12 +179,13 @@ impl BluetoothManager {
         }
     }
 
+    #[allow(unused)]
     pub fn connected_device(&self) -> Option<String> {
         self.connected_device.read().unwrap().clone()
     }
-
+    
     pub fn send_media_control(&self, cmd: BtCommand) {
-        self.sender.send(cmd);
+        let _ = self.sender.send(cmd);
     }
 
 }

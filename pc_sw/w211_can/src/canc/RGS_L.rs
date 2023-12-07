@@ -61,6 +61,6 @@ impl RGS_L_450 {
     pub fn set_PRESF_L_KI(&mut self, value: RGS_L_450h_PRESF_L_KI){ self.0 = (self.0 & 0xfffcffffffffffff) | ((value as u64) & 0x3) << 48; }
 
     /// Gets Presafe adjustment combined message
-    pub fn get_PRESF_L_KI(&self) -> std::result::Result<RGS_L_450h_PRESF_L_KI, ()> { return RGS_L_450h_PRESF_L_KI::try_from((self.0 >> 48 & 0x3) as u8) }
+    pub fn get_PRESF_L_KI(&self) -> Option<RGS_L_450h_PRESF_L_KI> {  RGS_L_450h_PRESF_L_KI::try_from((self.0 >> 48 & 0x3) as u8).ok() }
         
 }

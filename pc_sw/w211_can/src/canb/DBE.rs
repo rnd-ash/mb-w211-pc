@@ -156,7 +156,7 @@ impl DBE_A1 {
     pub fn set_SHD_ST(&mut self, value: DBE_A1_SHD_ST){ self.0 = (self.0 & 0xfffffff8ffffffff) | ((value as u64) & 0x7) << 32; }
 
     /// Gets sunroof status
-    pub fn get_SHD_ST(&self) -> std::result::Result<DBE_A1_SHD_ST, ()> { return DBE_A1_SHD_ST::try_from((self.0 >> 32 & 0x7) as u8) }
+    pub fn get_SHD_ST(&self) -> Option<DBE_A1_SHD_ST> {  DBE_A1_SHD_ST::try_from((self.0 >> 32 & 0x7) as u8).ok() }
         
     /// Sets Interior protection triggered
 
@@ -237,10 +237,10 @@ impl DBE_A1 {
         
     /// Sets Footwell lighting brightness. Conversion formula (To raw from real): y=(x-0.0)/1.00 (Unit: %)
 
-    pub fn set_FRBL_HELL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff) << 0; }
+    pub fn set_FRBL_HELL(&mut self, value: u8){ self.0 = (self.0 & 0xffffffffffffff00) | ((value as u64) & 0xff); }
 
     /// Gets Footwell lighting brightness. Conversion formula (To real from raw): y=(1.00x)+0.0 (Unit: %)
-    pub fn get_FRBL_HELL(&self) -> u8 { (self.0 >> 0 & 0xff) as u8 }
+    pub fn get_FRBL_HELL(&self) -> u8 { (self.0 & 0xff) as u8 }
         
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -467,9 +467,9 @@ impl SD_RS_DBE {
         
     /// Sets state variable 08h
 
-    pub fn set_DBE_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1) << 0; }
+    pub fn set_DBE_PGV08(&mut self, value: bool){ self.0 = (self.0 & 0xfffffffffffffffe) | ((value as u64) & 0x1); }
 
     /// Gets state variable 08h
-    pub fn get_DBE_PGV08(&self) -> bool { (self.0 >> 0 & 0x1) != 0 }
+    pub fn get_DBE_PGV08(&self) -> bool { (self.0 & 0x1) != 0 }
         
 }
