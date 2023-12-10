@@ -47,15 +47,13 @@ pub struct AgwEmulator {
 
 
 impl AgwEmulator {
-    pub fn new(can_name: String, vlad: CDMIsoTp) -> Self {
-        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 50, 0);
+    pub fn new(can_name: String, mut vlad: CDMIsoTp) -> Self {
+        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 40, 0);
         let _ = endpoint.set_nonblocking(true);
         let (sender, receiver) = mpsc::channel::<AgwCommand>();
         let (tx_isotp, rx_isotp) = mpsc::sync_channel::<Vec<u8>>(10);
         let current_page = Arc::new(RwLock::new(KombiPage::Other));
         let current_page_c = current_page.clone();
-        let mut handler : Option<JoinHandle<CDMIsoTp>> = None;
-        let mut vlad_handler = Some(vlad);
         // Alert IC that AGW has woken up
         std::thread::spawn(move || {
             let audio_page = AudioPage::new();
@@ -65,15 +63,7 @@ impl AgwEmulator {
             let _last_time_send_time = Instant::now();
             let mut ic_awake = false;
             loop {
-                let mut join = false;
-                if let Some(h) = handler.borrow_mut() {
-                    if h.is_finished() {
-                        join = true;
-                    }
-                }
-                if join {
-                    vlad_handler = Some(handler.take().unwrap().join().unwrap())
-                }
+                vlad.update();
                 /*
                 if last_time_send_time.elapsed().as_millis() > 250 {
                     last_time_send_time = Instant::now();
@@ -143,7 +133,7 @@ impl AgwEmulator {
                 }
                 if let Ok(to_send) = rx_isotp.try_recv() {
                     if endpoint.write(&to_send).is_ok() {
-                        std::thread::sleep(std::time::Duration::from_millis(80))
+                        std::thread::sleep(std::time::Duration::from_millis(40))
                     }
                 }
                 if let Ok(cmd) = receiver.try_recv() {
@@ -167,15 +157,7 @@ impl AgwEmulator {
                         }
                         AgwCommand::TrackUpdate(name) => {
                             if *current_page.read().unwrap() != KombiPage::Audio {
-                                if let Some(mut v) = vlad_handler.take() {
-                                    handler = Some(
-                                        std::thread::spawn(move|| {
-                                            v.notify_track_change(&name);
-                                            v
-                                        })
-                                    )
-                                    
-                                }
+                                vlad.notify_track_change(&name);
                             }
                         }
                     };

@@ -5,15 +5,14 @@ use super::{AgwPageFsm, build_agw_packet_checksum_in_place};
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Heading {
-    Unknown,
-    N,
-    S,
-    E,
-    W,
-    NE,
-    NW,
-    SE,
-    SW,
+    N = 0,
+    S = 1,
+    E = 2,
+    W = 3,
+    NE = 4,
+    NW = 5,
+    SE = 6,
+    SW = 7,
 }
 
 #[repr(u8)]
@@ -77,10 +76,10 @@ pub struct NaviPageState {
 impl Default for NaviPageState {
     fn default() -> Self {
         Self { 
-            current_road: "".into(), 
-            next_road: "RAND_ASH".into(), 
+            current_road: "NO ROAD".into(), 
+            next_road: "NO ROAD".into(), 
             distance_display_info: DistanceDisplay::default(),
-            meta: vec![0x00, 0x00, 0x13]
+            meta: vec![0x00, 0x00 | 2 << 5, 0x26]
         }
     }
 }
@@ -149,8 +148,9 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
             NaviPageCmd::TargetRoad(tr) => {
                 mod_state.next_road = tr;
             },
-            NaviPageCmd::CompassHeading(_ch) => {
-
+            NaviPageCmd::CompassHeading(heading) => {
+                mod_state.meta[1] &= 0b00011111;
+                mod_state.meta[1] |= (heading as u8) << 5;
             },
             NaviPageCmd::DistanceData(d) => {
                 mod_state.distance_display_info = d;

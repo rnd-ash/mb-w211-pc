@@ -51,7 +51,7 @@ impl Default for AudioPageState {
             },
             body_text: IcText {
                 format: TextFmtFlags::CENTER,
-                text: "Starting...".to_string(),
+                text: "Please wait".to_string(),
             },
             symbol_top: AudioSymbol::None,
             symbol_bottom: AudioSymbol::None,
