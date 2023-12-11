@@ -196,32 +196,52 @@ pub enum Justification {
     Right
 }
 
+#[repr(u8)]
+pub enum YaxisSetting {
+    /// Current Y position is the bottom of the text
+    BottomToTop = 0,
+    /// Current Y position is the center of the text
+    Center = 1,
+    /// Current Y position is the top of the text
+    TopToBottom = 2,
+}
+
+bitflags::bitflags! {
+    pub struct StatusLineClearFlag: u8 {
+        const CLEAR_TEMPERATURE = 1;
+        const CLEAR_TRIP = 2;
+        const CLEAR_ODOMETER = 4;
+        const CLEAR_GEARS = 8;
+    }
+}
+
 impl LayoutBuilder {
     pub fn new() -> Self {
         Self{ command_string: String::new(), end_coord: None }
     }
 
-    pub fn clear_lower_display(mut self) -> Self {
-        self.command_string.push_str(&format!("~I0"));
+    pub fn set_status_line(mut self, flags: StatusLineClearFlag) -> Self {
+        self.command_string.push_str(&format!("~I{:1X}", flags));
         self
     }
 
-    pub fn clear_display(mut self) -> Self {
-        self.command_string.push_str(&format!("~C0"));
+    pub fn refresh_display(mut self, clear: bool, bg_red: bool) -> Self {
+        let cmd = match clear {
+            true => "C",
+            false => "U",
+        };
+        let val = match bg_red {
+            true => "2",
+            false => "0",
+        };
+
+        self.command_string.push_str(&format!("~{cmd}{val}"));
         self
     }
 
-    pub fn clear_display_red_bg(mut self) -> Self {
-        self.command_string.push_str(&format!("~C2"));
+    pub fn make_next_element_blink(mut self) -> Self {
+        self.command_string.push_str("~F20");
         self
-    }
-
-    pub fn set_normal_bg(mut self) -> Self {
-        todo!()
-    }
-
-    pub fn set_red_bg(mut self) -> Self {
-        todo!()
     }
 
     pub fn new_line(mut self) -> Self {
@@ -273,6 +293,53 @@ impl LayoutBuilder {
     pub fn end_justfy_boundary(mut self) -> Self {
         let (e_x, e_y) = self.end_coord.take().unwrap();
         self.command_string.push_str(&format!("~P{e_x:02X}{e_y:02X}"));
+        self
+    }
+
+    pub fn cut_pixels_from_next_element(mut self, x_crop: Option<(u8, u8)>, y_crop: Option<(u8, u8)>) -> Self {
+        if let Some((s_x, e_x)) = x_crop {
+            self.command_string.push_str(&format!("~<{s_x:02X}{e_x:02X}"));
+        }
+        if let Some((s_y, e_y)) = y_crop {
+            self.command_string.push_str(&format!("~-{s_y:02X}{e_y:02X}"));
+        }
+        self
+    }
+
+    /// Sets how the next element on the display's Y position shall be assigned
+    pub fn set_next_element_y_positioning_method(mut self, setting: YaxisSetting) -> Self {
+        self.command_string.push_str(&format!("~J{:02X}", setting as u8));
+        self
+    }
+
+    /// Draws a line between 2 coordinates
+    /// If `start_pos` is empty, then the line starts from the current
+    /// coordinate of the display cursor
+    pub fn draw_line(mut self, start_pos: Option<(u8, u8)>, end_pos: (u8, u8)) -> Self {
+        if let Some((x, y)) = start_pos {
+           self = self.set_cursor_pos(x, y);
+        }
+        let (e_x, e_y) = end_pos;
+        self.command_string.push_str(&format!("~V{e_x:02X}{e_y:02X}"));
+        self
+    }
+
+    /// Draws a rectange between 2 opposite coordinates
+    /// If `start_pos` is empty, then the rectange top left coordinate is set to the current
+    /// display cursor position
+    /// 
+    /// - `end-pos` - The bottom right coordinate of the rectange
+    pub fn draw_rect(mut self, start_pos: Option<(u8, u8)>, end_pos: (u8, u8)) -> Self {
+        if let Some((x, y)) = start_pos {
+           self = self.set_cursor_pos(x, y);
+        }
+        let (e_x, e_y) = end_pos;
+        self.command_string.push_str(&format!("~Q{e_x:02X}{e_y:02X}"));
+        self
+    }
+
+    pub fn set_art_ring(mut self, enable: bool) -> Self {
+        self.command_string.push_str(&format!("~Y{:01X}", enable as u8));
         self
     }
 
@@ -364,8 +431,8 @@ impl CDMIsoTp {
         }
 
         let display_string = LayoutBuilder::new()
-            .clear_lower_display()
-            .clear_display()
+            .set_status_line(StatusLineClearFlag::empty())
+            .refresh_display(true, false)
             .start_justfy_boundary(Justification::Center, (5, 0), (120, 144))
             .set_text_font(1)
             .add_text("Track changed".into())
@@ -375,7 +442,7 @@ impl CDMIsoTp {
             .new_line()
             .add_text(show_test)
             .new_line()
-            .add_image(0x2B)
+            .add_image(Image::Disc as u16)
             .end_justfy_boundary()
             .finish();
         
