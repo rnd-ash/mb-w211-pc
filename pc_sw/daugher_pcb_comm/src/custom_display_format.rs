@@ -279,14 +279,22 @@ impl LayoutBuilder {
         self
     }
 
-    pub fn start_justfy_boundary(mut self, ty: Justification, start_coord: (u8, u8), end_coord: (u8, u8)) -> Self {
+    pub fn start_justfy_boundary(mut self, start_coord: (u8, u8), end_coord: (u8, u8)) -> Self {
         let (s_x, s_y) = start_coord;
         self.command_string.push_str(&format!("~P{s_x:02X}{s_y:02X}"));
+        //match ty {
+        //    Justification::Center => self.command_string.push_str("~Z"),
+        //    Justification::Right => self.command_string.push_str("~R"),
+        //}
+        self.end_coord = Some(end_coord);
+        self
+    }
+
+    pub fn set_next_text_justification(mut self, ty: Justification) -> Self {
         match ty {
             Justification::Center => self.command_string.push_str("~Z"),
             Justification::Right => self.command_string.push_str("~R"),
         }
-        self.end_coord = Some(end_coord);
         self
     }
 
@@ -308,7 +316,7 @@ impl LayoutBuilder {
 
     /// Sets how the next element on the display's Y position shall be assigned
     pub fn set_next_element_y_positioning_method(mut self, setting: YaxisSetting) -> Self {
-        self.command_string.push_str(&format!("~J{:02X}", setting as u8));
+        self.command_string.push_str(&format!("~J{:1X}", setting as u8));
         self
     }
 
@@ -372,48 +380,64 @@ pub struct CDMIsoTp {
 impl CDMIsoTp {
     pub fn new(can: String) -> Self {
         Self {
-            handler: w211_can::canbus::CanBus::create_isotp_socket_with_name(&can, 0x3E1, 0x1A1, 40, 8),
+            handler: w211_can::canbus::CanBus::create_isotp_socket_with_name(&can, 0x3E1, 0x1A1, 50, 0),
             display_open: false,
             popup: Popup { duration: 0, fmt_str: String::new() },
             show_time: Instant::now()
         }
     }
 
-    fn update_buffer(&mut self, s: &str) {
-        let mut buffer = vec![0x00, 0x00];
-        buffer.extend_from_slice(s.as_bytes());
-        buffer.push(0x00);
-        let _ = self.handler.write(&buffer); // Write to string buffer before show
+    pub fn update_buffer(&mut self, s: &str) {
+        if !self.display_open {
+            // [ SPECIAL_CMD COMMAND STR_POS_IDX ]
+            let mut buffer = vec![0x00, 0x00];
+            buffer.extend_from_slice(s.as_bytes());
+            buffer.push(0x00);
+            let _ = self.handler.write(&buffer); // Write to string buffer before show
+            self.popup.fmt_str = s.to_string();
+        } else {
+            self.update_buffer_live(s); // One command
+        }
     }
 
-    fn stop_display(&mut self) {
+    pub fn update_buffer_live(&mut self, s: &str) {
+        //if !self.display_open {
+            // [ SPECIAL_CMD COMMAND STR_POS_IDX ]
+            let mut buffer = vec![0xFE, 0x00];
+            buffer.extend_from_slice(s.as_bytes());
+            buffer.push(0x00);
+            let _ = self.handler.write(&buffer); // Write to string buffer before show
+            self.popup.fmt_str = s.to_string();
+        //}
+    }
+
+    pub fn stop_display(&mut self) {
+        println!("Display stop");
+        // [ COMMAND STR_POS_IDX ]
         let _ = self.handler.write(&[0x00, 0x00, 0x00]); // Stop processing
         self.display_open = false;
     }
 
-    fn show_display(&mut self) {
-        let _ = self.handler.write(&[0xFE]); // Show screen
+    pub fn show_display(&mut self, duration: u32) {
         self.show_time = Instant::now();
-        self.display_open = true;
+        self.popup.duration = duration;
+        if !self.display_open {
+            println!("Display show");
+            std::thread::sleep(Duration::from_millis(40));
+            let _ = self.handler.write(&[0xFE]); // Show screen
+            self.display_open = true;
+        }
     }
 
     pub fn update(&mut self) {
         if self.display_open {
-            if self.popup.duration > self.show_time.elapsed().as_millis() as u32 {
+            if self.popup.duration < self.show_time.elapsed().as_millis() as u32 {
                 self.stop_display();
             }
         }
     }
 
     pub fn notify_track_change(&mut self, name: &str) {
-        // IMAGES:
-        // 90-99 Small lane arrows with directions?
-        // 88 - Lap 
-        // 87 - GPS
-        // 86 - Data Rx
-        // 85 - Data Tx
-        // 84 - Mute
-        // 83 - Unmute
         let mut show_test = "".to_string();
         let mut count = 0;
         for c in name.chars() {
@@ -431,14 +455,16 @@ impl CDMIsoTp {
         }
 
         let display_string = LayoutBuilder::new()
-            .set_status_line(StatusLineClearFlag::empty())
+            .set_status_line(StatusLineClearFlag::CLEAR_TRIP | StatusLineClearFlag::CLEAR_TEMPERATURE)
             .refresh_display(true, false)
-            .start_justfy_boundary(Justification::Center, (5, 0), (120, 144))
+            .start_justfy_boundary((5, 0), (120, 144))
+            .set_next_element_y_positioning_method(YaxisSetting::TopToBottom)
             .set_text_font(1)
+            .set_next_text_justification(Justification::Center)
             .add_text("Track changed".into())
-            .set_text_font(0)
-            .override_text_height_px(13)
             .new_line()
+            .set_text_font(0) // Monospace
+            //.override_text_height_px(13)
             .new_line()
             .add_text(show_test)
             .new_line()
@@ -446,12 +472,8 @@ impl CDMIsoTp {
             .end_justfy_boundary()
             .finish();
         
-        self.popup.duration = 2000;
+        log::info!("Display cmd: '{display_string}'");
         self.update_buffer(&display_string);
-        self.popup.fmt_str = display_string;
-        if !self.display_open {
-            std::thread::sleep(Duration::from_millis(40));
-            self.show_display();
-        }
+        self.show_display(2500);
     }
 }

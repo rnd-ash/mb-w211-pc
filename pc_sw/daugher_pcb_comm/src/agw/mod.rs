@@ -3,7 +3,7 @@ use std::{
     time::Instant, thread::JoinHandle, borrow::BorrowMut,
 };
 
-use self::{bluetooth_manager::{BluetoothManager, BtCommand}, navigation::{NaviPage, NaviPageCmd}, audio_control::AudioManager, keys::{WheelKeyManager, W213WheelKey}};
+use self::{bluetooth_manager::{BluetoothManager, BtCommand}, navigation::{NaviPage, NaviPageCmd}, audio_control::AudioManager, keys::{WheelKeyManager, W213WheelKey}, audio::AudioCfgSettings};
 
 mod bluetooth_manager;
 mod keys;
@@ -25,7 +25,10 @@ pub enum AgwCommand {
     SetAudioBodyText(IcText),
     SetAudioHeaderText(IcText),
     SetAudioSymbols(AudioSymbol, AudioSymbol),
-    SendNaviData(NaviPageCmd)
+    SendNaviData(NaviPageCmd),
+    ShowCustomDisplay,
+    HideCustomDisplay,
+    UpdateCustomDisplay(String)
 }
 
 /// Audio gateway emulator master
@@ -47,8 +50,8 @@ pub struct AgwEmulator {
 
 
 impl AgwEmulator {
-    pub fn new(can_name: String, mut vlad: CDMIsoTp) -> Self {
-        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 40, 0);
+    pub fn new(can_name: String, mut vlad: CDMIsoTp, audio_settings: AudioCfgSettings) -> Self {
+        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 50, 0);
         let _ = endpoint.set_nonblocking(true);
         let (sender, receiver) = mpsc::channel::<AgwCommand>();
         let (tx_isotp, rx_isotp) = mpsc::sync_channel::<Vec<u8>>(10);
@@ -56,7 +59,7 @@ impl AgwEmulator {
         let current_page_c = current_page.clone();
         // Alert IC that AGW has woken up
         std::thread::spawn(move || {
-            let audio_page = AudioPage::new();
+            let audio_page = AudioPage::new(audio_settings);
             let (a_page, a_msg, a_ack, a_cmd) = AgwPageWrapper::new(tx_isotp.clone(), audio_page);
             let nav_page = NaviPage::new();
             let (n_page, n_msg, n_ack, n_cmd) = AgwPageWrapper::new(tx_isotp.clone(), nav_page);
@@ -95,8 +98,6 @@ impl AgwEmulator {
                             log::info!("IC HAS WOKEN UP!");
                             a_page.reset();
                             n_page.reset();
-                            //a_msg.send(vec![0x20, 0x02, 0x11]);
-                            //n_msg.send(vec![0x20, 0x02, 0x11]);
                         } else if ic_pkg.len() == 3 {
                             if let Ok(status) = KombiAck::try_from(ic_pkg[2]) {
                                 let _ = match page {
@@ -133,7 +134,7 @@ impl AgwEmulator {
                 }
                 if let Ok(to_send) = rx_isotp.try_recv() {
                     if endpoint.write(&to_send).is_ok() {
-                        std::thread::sleep(std::time::Duration::from_millis(40))
+                        std::thread::sleep(std::time::Duration::from_millis(80))
                     }
                 }
                 if let Ok(cmd) = receiver.try_recv() {
@@ -160,6 +161,15 @@ impl AgwEmulator {
                                 vlad.notify_track_change(&name);
                             }
                         }
+                        AgwCommand::ShowCustomDisplay => {
+                            vlad.show_display(u32::MAX)
+                        },
+                        AgwCommand::HideCustomDisplay => {
+                            vlad.stop_display()
+                        },
+                        AgwCommand::UpdateCustomDisplay(s) => {
+                            vlad.update_buffer_live(&s)
+                        },
                     };
                 }
                 std::thread::sleep(std::time::Duration::from_millis(10));

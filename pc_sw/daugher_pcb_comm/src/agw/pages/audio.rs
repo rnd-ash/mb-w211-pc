@@ -2,7 +2,13 @@ use crate::agw::{build_agw_packet_checksum_in_place, IcText, TextFmtFlags};
 use tokio::time::Instant;
 use super::AgwPageFsm;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AudioCfgSettings {
+    pub auto_scroll: bool
+}
+
 pub struct AudioPage {
+    settings: AudioCfgSettings,
     last_rotate_time: Instant,
     rotating_body: Vec<String>,
     rotating_idx: usize,
@@ -10,8 +16,9 @@ pub struct AudioPage {
 }
 
 impl AudioPage {
-    pub fn new() -> Self {
+    pub fn new(settings: AudioCfgSettings) -> Self {
         Self {
+            settings,
             last_rotate_time: Instant::now(),
             rotating_body: Vec::new(),
             rotating_idx: 0,
@@ -51,7 +58,7 @@ impl Default for AudioPageState {
             },
             body_text: IcText {
                 format: TextFmtFlags::CENTER,
-                text: "Please wait".to_string(),
+                text: "Staring".to_string(),
             },
             symbol_top: AudioSymbol::None,
             symbol_bottom: AudioSymbol::None,
@@ -154,7 +161,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
                 if p != state {
                     state = p.clone();
                     self.last_rotate_time = Instant::now();
-                    if state.body_text.text.len() > 15 {
+                    if state.body_text.text.len() > 20 && self.settings.auto_scroll {
                         self.rotating_body = state
                             .body_text
                             .text
@@ -194,7 +201,7 @@ impl AgwPageFsm<AudioPageState, AudioPageCmd> for AudioPage {
             AudioPageCmd::SetBody(b) => {
                 if b != state.body_text {
                     state.body_text = b.clone();
-                    if state.body_text.text.len() > 200 {
+                    if state.body_text.text.len() > 20 && self.settings.auto_scroll  {
                         self.rotating_body = state
                             .body_text
                             .text

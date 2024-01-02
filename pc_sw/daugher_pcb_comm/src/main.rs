@@ -1,5 +1,6 @@
 
 pub mod agw;
+use agw::audio::AudioCfgSettings;
 use custom_display_format::CDMIsoTp;
 use w211_can::{canbus::{CanBus, frame_to_u64}, canb::EZS_A1, socketcan::{SocketOptions, CanFilter, Socket}};
 pub mod custom_display_format;
@@ -7,10 +8,13 @@ pub mod custom_display_format;
 fn main() {
     env_logger::init();
     let can_name = CanBus::B.get_net_name().to_string(); // Runs on bus B
-    let _agw_socket = w211_can::canbus::CanBus::B.create_isotp_socket(0x1A4, 0x1D0, 50, 0);
-
     let vlad = CDMIsoTp::new(can_name.clone());
-    let agw = agw::AgwEmulator::new(can_name, vlad);
+
+    let audio_page_settings = AudioCfgSettings {
+        auto_scroll: true,
+    };
+
+    let agw: agw::AgwEmulator = agw::AgwEmulator::new(can_name, vlad, audio_page_settings);
     let _next_down = false;
     let _prev_down = false;
 

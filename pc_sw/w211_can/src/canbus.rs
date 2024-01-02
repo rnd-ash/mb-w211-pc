@@ -24,7 +24,7 @@ impl CanBus {
     }
 
     pub fn create_can_socket_with_name(name: &str) -> CanSocket {
-        socketcan::CanSocket::open(name).unwrap()
+        socketcan::CanSocket::open(name).expect(&format!("Can {name} not found"))
     }
 
     pub fn create_isotp_socket(&self, rx: u16, tx: u16, stmin: u8, bs: u8) -> IsoTpSocket {

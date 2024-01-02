@@ -2,7 +2,7 @@ use std::{sync::{atomic::{AtomicBool, Ordering, AtomicU8, AtomicU64, AtomicU32, 
 
 use eframe::{NativeOptions, epaint::{Vec2, Color32, FontId, Shape, PathShape, Stroke, Mesh, TextureId, mutex::RwLock, Pos2, Rect}, egui::{Button, CentralPanel, Sense, self, Ui}, emath::{Align2, lerp}};
 use egui_extras::{StripBuilder, Size};
-use w211_can::{canbus::{CanBus, CanWrapper}, canb, canc::{LRW_236, MS_210, BS_200, BS_200h_BLS}};
+use w211_can::{canbus::{CanBus}, canb, canc::{LRW_236, MS_210, BS_200, BS_200h_BLS}, socketcan::{SocketOptions, Socket}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ButtonType {
@@ -50,25 +50,16 @@ fn make_pair<T>(init: T) -> (Arc<T>, Arc<T>) {
 impl LowerControlPanelUI {
     pub fn new() -> Self {
         let can = CanBus::B;
-        let can_b = loop {
-            if let Ok(c)= can.create_can_socket(&[0x210]) {
-                break c;
-            } else {
-                std::thread::sleep(Duration::from_millis(100));
-            }
-        };
+        let can_b = can.create_can_socket();
+        can_b.set_filters(&[(0x210, 0xFFF)]);
 
-        let can_b_monitor = can.create_can_socket(&[]).unwrap();
+        let can_b_monitor =  can.create_can_socket();
 
         let can = CanBus::C;
-        let can_c = loop {
-            if let Ok(c)= can.create_can_socket(&[0x608]) {
-                break c;
-            } else {
-                std::thread::sleep(Duration::from_millis(100));
-            }
-        };
-        let can_c_monitor = can.create_can_socket(&[]).unwrap();
+        let can_c =  can.create_can_socket();
+        can_c.set_filters(&[(0x608, 0xFFF)]);
+
+        let can_c_monitor = can.create_can_socket();
 
         let (heater_right, heater_right_c) = make_pair(AtomicBool::new(false));
         let (reboot, reboot_c) = make_pair(AtomicBool::new(false));
@@ -93,7 +84,7 @@ impl LowerControlPanelUI {
         let eq_running = Arc::new(AtomicBool::new(false));
         std::thread::spawn(move|| {
             loop {
-                if let Some((f, data)) = can_c.read_frame() {
+                if let Ok(f) = can_c.read_frame() {
                     if f == 0x608 { // MS608 (10 updates/sec)
                         let f = ((data[5] as u16) << 8) | data[6] as u16; // Consumption over last 250ms
                         fuel_flow_c.store(f as u64, Ordering::Relaxed); // ul/sec
@@ -439,12 +430,18 @@ impl eframe::App for LowerControlPanelUI {
                                                     // BACK - Down
                                                     // LEFT - Left
                                                     // RIGHT - Right
-                                                    let cs_mrm = w211_can::canbus::CanBus::C;
-                                                    let wheel_can = w211_can::canbus::CanBus::B;
-                                                    let wrapper = cs_mrm.create_can_socket(&[0x0236]).unwrap();
-                                                    let wrapper_pw = cs_mrm.create_can_socket(&[0x210]).unwrap();
-                                                    let wrapper_brake = cs_mrm.create_can_socket(&[0x200]).unwrap();
-                                                    let wrapper_b = wheel_can.create_can_socket(&[0x01A8]).unwrap();
+
+                                                    let canc = w211_can::canbus::CanBus::C;
+                                                    let canb = w211_can::canbus::CanBus::B;
+
+                                                    let wrapper = canb.create_can_socket();
+                                                    wrapper.set_filters(&[(0x0236, 0xFFFF)]);
+                                                    let wrapper_pw = canc.create_can_socket();
+                                                    wrapper_pw.set_filters(&[(0x0210, 0xFFFF)]).unwrap();
+                                                    let wrapper_brake = canc.create_can_socket();
+                                                    wrapper_brake.set_filters(&[(0x0200, 0xFFFF)]).unwrap();
+                                                    let wrapper_b = canb.create_can_socket();
+                                                    wrapper_b.set_filters(&[(0x1A8, 0xFFFF)]).unwrap();
                                                     let mut pedal = false;
                                                     let mut left = false;
                                                     let mut right = false;

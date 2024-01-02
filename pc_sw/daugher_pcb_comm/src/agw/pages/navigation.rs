@@ -79,7 +79,7 @@ impl Default for NaviPageState {
             current_road: "NO ROAD".into(), 
             next_road: "NO ROAD".into(), 
             distance_display_info: DistanceDisplay::default(),
-            meta: vec![0x00, 0x00 | 2 << 5, 0x26]
+            meta: vec![0x17, 0x00, 0x00, 0xCC, 0xCC, 0x01, 0x00, 0x03]
         }
     }
 }
@@ -102,6 +102,7 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
     }
 
     fn build_pkg_26(&self, state: &NaviPageState) -> Vec<u8> {
+        /*
         let mut buf = vec![0x04, 0x26, 0x01, 0x00, 0x03];
         // First string
         buf.push(3 + state.next_road.len() as u8);
@@ -122,6 +123,24 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
         buf.push(2 + meta_array.len() as u8);
         buf.push(0x80);
         buf.extend_from_slice(&meta_array);
+        buf.push(0x00);
+        build_agw_packet_checksum_in_place(buf)
+        */
+        let mut buf = vec![0x04, 0x26, 0x01, 0x00, 0x03];
+        // First string
+        buf.push(3 + state.next_road.len() as u8);
+        buf.push(0x10); // Todo format
+        buf.extend_from_slice(state.next_road.as_bytes());
+        buf.push(0x00);
+        // Second string
+        buf.push(3 + state.current_road.len() as u8);
+        buf.push(0x10); // Todo format
+        buf.extend_from_slice(state.current_road.as_bytes());
+        buf.push(0x00);
+        // Symbol data
+        buf.push(2 + state.meta.len() as u8);
+        buf.push(0x80);
+        buf.extend_from_slice(&state.meta);
         buf.push(0x00);
         build_agw_packet_checksum_in_place(buf)
     }
@@ -149,8 +168,8 @@ impl AgwPageFsm<NaviPageState, NaviPageCmd> for NaviPage {
                 mod_state.next_road = tr;
             },
             NaviPageCmd::CompassHeading(heading) => {
-                mod_state.meta[1] &= 0b00011111;
-                mod_state.meta[1] |= (heading as u8) << 5;
+                //mod_state.meta[1] &= 0b00011111;
+                //mod_state.meta[1] |= (heading as u8) << 5;
             },
             NaviPageCmd::DistanceData(d) => {
                 mod_state.distance_display_info = d;
