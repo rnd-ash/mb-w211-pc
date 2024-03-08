@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.2.7", features = ["derive"] }
-serial-rs = {git="https://github.com/rnd-ash/serial-rs"}
+futures-util = "0.3.30"
+tokio = {version = "1.36.0", features=["full"]}
+tokio-socketcan = "0.3.1"
 w211_can = { path="../w211_can" }
+tokio-serial = { version = "5.4.4", features = ["libudev"] }

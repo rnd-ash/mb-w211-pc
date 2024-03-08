@@ -5,9 +5,9 @@ use socketcan_isotp::{IsoTpSocket, FlowControlOptions, IsoTpOptions, IsoTpBehavi
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub enum CanBus {
-    C = 67,
-    B = 66,
-    E = 69,
+    B = 0b01,
+    C = 0b10,
+    E = 0b11,
 }
 
 impl CanBus {

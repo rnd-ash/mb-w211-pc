@@ -6,6 +6,6 @@ pub mod canc;
 
 pub use packed_struct;
 
-pub extern crate socketcan;
-pub extern crate socketcan_isotp;
+pub use socketcan;
+pub use socketcan_isotp;
 

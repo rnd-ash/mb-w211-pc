@@ -1,33 +1,25 @@
-use std::{time::Duration, thread, sync::{Arc, atomic::{AtomicU32, Ordering}}, io::{Read, ErrorKind}, process::exit};
+use std::{process::exit, thread, time::Duration};
 
 use clap::Parser;
-use serial_rs::SerialPortSettings;
-use serial_rs::*;
-use w211_can::{canbus::CanBus, socketcan::{CanSocket, SocketOptions, Socket, CanDataFrame, EmbeddedFrame, CanFrame}, socketcan_isotp::{Id, StandardId}};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, sync::mpsc::{UnboundedReceiver, UnboundedSender}};
+use tokio_serial::{SerialPort, SerialPortBuilderExt, SerialPortInfo, SerialPortType};
+use tokio_socketcan::{CANFrame, CANSocket};
+use w211_can::{canbus::CanBus};
+use futures_util::stream::StreamExt;
 
 #[derive(Debug, Clone, Parser)]
 pub struct AppSettings {
     baud: u32
 }
 
-pub fn can_frame_from_bytes(b: &[u8; 13]) -> Option<(CanBus, CanFrame)> {
-    // Easiest check is CRC first
-    let mut crc = 0xFFu8;
-    for i in 0..12u8 {
-        crc = crc.wrapping_sub(i);
-        crc = crc.wrapping_sub(b[i as usize]);
-    }
-    if crc != b[12] {
-        // CRC compare failed
-        return None;
-    }
-    let bus_tag = match b[0] {
-        67 => CanBus::C,
-        66 => CanBus::B,
-        69 => CanBus::E,
+pub fn can_frame_from_bytes(b: &[u8; 16]) -> Option<(CanBus, CANFrame)> {
+    let bus_tag = match b[0] & 0b11 {
+        0b01 => CanBus::B,
+        0b10 => CanBus::C,
+        0b11 => CanBus::E,
         _ => return None
     };
-    let id = ((b[2] as u16) << 8) | b[1] as u16;
+    let id = ((b[2] as u16) << 8) | ((b[1] as u16));
     if id > 0x7FF {
         return None;
     }
@@ -35,63 +27,49 @@ pub fn can_frame_from_bytes(b: &[u8; 13]) -> Option<(CanBus, CanFrame)> {
     if dlc > 8 {
         return None;
     }
+    if
+        b[12] != 0xDE ||
+        b[13] != 0xAD ||
+        b[14] != 0xBE ||
+        b[15] != 0xEF
+    {
+        return None;
+    }
     // Can Frame OK!
     Some((bus_tag,
-        CanFrame::Data(
-            CanDataFrame::new(
-                Id::Standard(unsafe { StandardId::new_unchecked(id) }),
-            &b[4..4+dlc as usize]
-            ).unwrap()
-        ))
-    )
+        CANFrame::new(id as u32, &b[4..4+dlc as usize], false, false).unwrap()
+    ))
 
 } 
 
-fn from_can_to_pc_frame(f: &CanFrame, bus: CanBus) -> Option<[u8; 13]> {
-    if let Id::Standard(std_id) = f.id() {
-        let mut ret = [0u8; 13];
-        let id = std_id.as_raw();
-        ret[0] = bus as u8;
-        ret[1] = (id & 0xFF) as u8;
-        ret[2] = ((id >> 8) & 0xFF) as u8;
-        ret[3] = f.dlc() as u8;
-        ret[4..4+f.dlc()].copy_from_slice(&f.data());
-
-        // Sign
-        let mut crc = 0xFFu8;
-        for i in 0..12u8 {
-            crc = crc.wrapping_sub(i);
-            crc = crc.wrapping_sub(ret[i as usize]);
-        }
-        ret[12] = crc;
-        Some(ret)
-    } else {
-        None
-    }
-}
-
-fn make_can_channel(iface: CanBus) -> (Arc<CanSocket>, Arc<CanSocket>) {
-    let can = Arc::new(iface.create_can_socket());
-    can.set_filter_accept_all().unwrap();
-    can.set_error_filter_drop_all().unwrap();
-    can.set_nonblocking(true).unwrap();
-    (can.clone(), can)
+fn from_can_to_pc_frame(f: &CANFrame, bus: CanBus, buf: &mut [u8; 16]) {
+    let id = f.id();
+    buf[0] = bus as u8;
+    buf[1] = (id & 0xFF) as u8;
+    buf[2] = ((id >> 8) & 0xFF) as u8;
+    buf[3] = f.data().len() as u8;
+    buf[4..4+f.data().len()].copy_from_slice(&f.data());
+    buf[12] = 0xDE;
+    buf[13] = 0xAD;
+    buf[14] = 0xBE;
+    buf[15] = 0xEF;
 }
 
 pub const VID: u16 = 0x03eb;
 pub const PID: u16 = 0x2175;
 
 #[allow(non_snake_case)]
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let settings = AppSettings::parse();
     println!("Waiting for port to be available");
-    let port_name: String;
+    let port_info: SerialPortInfo;
     'search: loop {
-        if let Ok(list) = serial_rs::list_ports() {
-            for port in list {
-                if port.get_vid() == VID && port.get_pid() == PID {
-                    port_name = port.get_port().to_string();
-                    println!("Found {:04X}:{:04X} on {}", VID, PID, port.get_port());
+        for port in tokio_serial::available_ports().unwrap_or_default() {
+            if let SerialPortType::UsbPort(usb) = &port.port_type {
+                if usb.vid == VID && usb.pid == PID {
+                    port_info = port.clone();
+                    println!("Found {:04X}:{:04X} on {}", VID, PID, port.port_name);
                     break 'search;
                 }
             }
@@ -100,93 +78,84 @@ fn main() {
     }
     println!("Port ready!");
 
-    let (CAN_B, CAN_B_R) = make_can_channel(CanBus::B);
-    let (CAN_C, CAN_C_R) = make_can_channel(CanBus::C);
-    let (CAN_E, CAN_E_R) = make_can_channel(CanBus::E);
+    let canb = tokio_socketcan::CANSocket::open("vcan_b").unwrap();
+    let canc = tokio_socketcan::CANSocket::open("vcan_c").unwrap();
+    let cane = tokio_socketcan::CANSocket::open("vcan_e").unwrap();
+    let (to_canb, from_canb) = tokio::sync::mpsc::unbounded_channel::<CANFrame>();
+    let (to_canc, from_canc) = tokio::sync::mpsc::unbounded_channel::<CANFrame>();
+    let (to_cane, from_cane) = tokio::sync::mpsc::unbounded_channel::<CANFrame>();
+    let (to_port, mut from_bus) = tokio::sync::mpsc::unbounded_channel::<[u8; 16]>();
 
-    let port_settings = SerialPortSettings::default()
-        .baud(settings.baud)
-        .read_timeout(Some(10000))
-        .write_timeout(None)
-        .set_flow_control(FlowControl::RtsCts);
-    
+    // Spawn handlers for each bus
+    let canb_sender = to_port.clone();
+    let canc_sender = to_port.clone();
+    let cane_sender = to_port.clone();
 
-    let mut port = serial_rs::new_from_path(
-        &port_name,
-        Some(port_settings)
-    ).unwrap();
-
-    let mut port_clone = port.try_clone().unwrap();
-    let error_counter = Arc::new(AtomicU32::new(0));
-    let error_counter_writer = error_counter.clone();
-
-    const MAX_ERRORS: u32 = 100;
-
-    std::thread::spawn(move || {
-        println!("Writer thread running");
-        port.clear_output_buffer().unwrap();
-        while error_counter_writer.load(Ordering::Relaxed) < MAX_ERRORS {
-            let mut data: Vec<u8> = Vec::new();
-            while let Ok(f) = CAN_B.read_frame() {
-                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::B) {
-                    data.extend_from_slice(&cf);
+    let spawn_can_thread = |mut receiver: UnboundedReceiver<CANFrame>, sender: UnboundedSender<[u8; 16]>, mut bus: CANSocket, tag: CanBus| {
+        tokio::spawn(async move {
+            let mut buf: [u8; 16] = [0; 16];
+            loop {
+                tokio::select! {
+                    Some(f) = receiver.recv() => {
+                        bus.write_frame(f).unwrap().await.unwrap();
+                    }
+                    Some(Ok(frame)) = bus.next() => {
+                        from_can_to_pc_frame(&frame, tag, &mut buf);
+                        sender.send(buf.clone()).unwrap();
+                    }
                 }
             }
-            while let Ok(f) = CAN_C.read_frame() {
-                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::C) {
-                    data.extend_from_slice(&cf);
-                }
-            }
-            while let Ok(f) = CAN_E.read_frame() {
-                if let Some(cf) = from_can_to_pc_frame(&f, CanBus::E) {
-                    data.extend_from_slice(&cf);
-                }
-            }
+        });
+    };
 
-            if data.len() != 0 {
-                port.write(&data).unwrap();
-                port.flush().unwrap();
-            } else {
-                std::thread::sleep(std::time::Duration::from_millis(5));
-            }     
-        }
-        eprintln!("Transmitter thread terminating");
-    });
-    let reader_thread = std::thread::spawn(move || {
-        println!("Reader thread running");
-        port_clone.clear_input_buffer().unwrap();
-        while error_counter.load(Ordering::Relaxed) < MAX_ERRORS {
-            let mut buf: [u8; 13] = [0; 13];
-            match port_clone.read_exact(&mut buf) {
-                Ok(_) => {
+    spawn_can_thread(from_canb, canb_sender, canb, CanBus::B);
+    spawn_can_thread(from_canc, canc_sender, canc, CanBus::C);
+    spawn_can_thread(from_cane, cane_sender, cane, CanBus::E);
+
+    let port = tokio_serial::new(port_info.port_name, settings.baud)
+        .timeout(Duration::from_millis(5000))
+        .data_bits(tokio_serial::DataBits::Eight)
+        .flow_control(tokio_serial::FlowControl::None)
+        .open_native_async()
+        .unwrap();
+
+    port.clear(tokio_serial::ClearBuffer::All).unwrap();
+    let (mut port_read, mut port_write) = tokio::io::split(port);
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    runtime.spawn(async move {
+        let mut buf: [u8; 16] = [0; 16];
+        loop {
+            match port_read.read_exact(&mut buf).await {
+                Ok(16) => {
                     match can_frame_from_bytes(&buf) {
                         Some((bus, frame)) => {
                             match bus {
-                                CanBus::C => CAN_C_R.write_frame(&frame).unwrap(),
-                                CanBus::B => CAN_B_R.write_frame(&frame).unwrap(),
-                                CanBus::E => CAN_E_R.write_frame(&frame).unwrap(),
-                            }
-                            error_counter.store(0, Ordering::Relaxed);
+                                CanBus::B => to_canb.send(frame).unwrap(),
+                                CanBus::C => to_canc.send(frame).unwrap(),
+                                CanBus::E => to_cane.send(frame).unwrap(),
+                            };
                         },
                         None => {
-                            error_counter.fetch_add(1, Ordering::Relaxed);
-                            port_clone.clear_input_buffer().unwrap();
-                            eprintln!("Serialize error. buf was {:02X?}", buf);
+                            eprintln!("CAN Decode error! Buffer was {buf:02X?}");
                         }
                     }
                 },
+                Ok(x) => {
+                    eprintln!("Could not read full 16 bytes, only {x}!");
+                }
                 Err(e) => {
-                    if ErrorKind::BrokenPipe == e.kind() {
-                        exit(1); // Disconnected
-                    }
-                    println!("READ error {e:?}");
-                    error_counter.fetch_add(1, Ordering::Relaxed);
+                    println!("Device disconnected! Exiting: {}", e.to_string());
+                    exit(1);
                 }
             }
         }
-        eprintln!("Receiver thread terminating");
     });
-    println!("CAN Daemon is running");
-    reader_thread.join().unwrap();
-    println!("Critical error. Terminating");
+    let handle = runtime.spawn(async move {
+        loop {
+            if let Some(to_write) = from_bus.recv().await {
+                port_write.write_all(&to_write).await.unwrap();
+            }
+        }
+    });
+    handle.await.unwrap();
 }
