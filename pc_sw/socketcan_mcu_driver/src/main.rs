@@ -5,7 +5,7 @@ use tokio::{io::{AsyncReadExt, AsyncWriteExt}, sync::mpsc::{UnboundedReceiver, U
 use tokio_serial::{SerialPort, SerialPortBuilderExt, SerialPortInfo, SerialPortType};
 use tokio_socketcan::{CANFrame, CANSocket};
 use w211_can::{canbus::CanBus};
-use futures_util::stream::StreamExt;
+use futures_util::{stream::StreamExt, TryFutureExt};
 
 #[derive(Debug, Clone, Parser)]
 pub struct AppSettings {
@@ -112,16 +112,17 @@ async fn main() {
     spawn_can_thread(from_canc, canc_sender, canc, CanBus::C);
     spawn_can_thread(from_cane, cane_sender, cane, CanBus::E);
 
-    let port = tokio_serial::new(port_info.port_name, settings.baud)
-        .timeout(Duration::from_millis(5000))
+    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    let mut port = tokio_serial::new(port_info.port_name, settings.baud)
+        .timeout(Duration::from_millis(1000))
         .data_bits(tokio_serial::DataBits::Eight)
         .flow_control(tokio_serial::FlowControl::None)
         .open_native_async()
         .unwrap();
-
+    port.set_exclusive(true).unwrap();
     port.clear(tokio_serial::ClearBuffer::All).unwrap();
     let (mut port_read, mut port_write) = tokio::io::split(port);
-    let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    println!("Starting workers");
     runtime.spawn(async move {
         let mut buf: [u8; 16] = [0; 16];
         loop {
@@ -137,6 +138,21 @@ async fn main() {
                         },
                         None => {
                             eprintln!("CAN Decode error! Buffer was {buf:02X?}");
+                            let mut b = 0x00;
+                            let mut counter = 0;
+                            loop {
+                                b = port_read.read_u8().await.unwrap();
+                                println!("Read {b:02X?}");
+                                if b == 0xEF {
+                                    break;
+                                } else {
+                                    counter+=1;
+                                }
+                                if counter == 16 {
+                                    eprintln!("MAX RETRIES REACHED");
+                                    exit(1);
+                                }
+                            }
                         }
                     }
                 },
