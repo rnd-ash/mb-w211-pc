@@ -1,6 +1,6 @@
 use bitflags::bitflags;
-use std::{sync::{mpsc, atomic::{AtomicBool, Ordering}, Arc}, time::Duration};
-use tokio::time::Instant;
+use std::sync::{mpsc, atomic::{AtomicBool, Ordering}, Arc};
+use tokio::{runtime::Handle, sync::mpsc::{unbounded_channel, UnboundedSender}, time::Instant};
 
 pub mod audio;
 pub mod navigation;
@@ -85,13 +85,13 @@ pub struct PageTxData<'a> {
     ack: KombiAck,
     last_sent: Vec<u8>,
     sent_counter: u32,
-    sender: &'a mpsc::SyncSender<Vec<u8>>,
+    sender: &'a UnboundedSender<Vec<u8>>,
     init_completed: bool,
     last_sent_pkg: u8,
 }
 
 impl<'a> PageTxData<'a> {
-    pub fn new(sender: &'a mpsc::SyncSender<Vec<u8>>) -> Self {
+    pub fn new(sender: &'a UnboundedSender<Vec<u8>>) -> Self {
         Self {
             ack: KombiAck::None,
             last_sent: vec![],
@@ -183,30 +183,30 @@ pub struct AgwPageWrapper {
 
 impl AgwPageWrapper {
     pub fn new<T: Default + Send + Sync, Cmd: Send + Sync + 'static>(
-        sender: mpsc::SyncSender<Vec<u8>>,
+        sender: UnboundedSender<Vec<u8>>,
+        rt: &Handle,
         mut pg: (impl AgwPageFsm<T, Cmd> + Send + Sync + 'static),
     ) -> (
         Self,
-        mpsc::Sender<Vec<u8>>,
-        mpsc::Sender<(u8, KombiAck)>,
-        mpsc::Sender<Cmd>,
+        UnboundedSender<Vec<u8>>,
+        UnboundedSender<(u8, KombiAck)>,
+        UnboundedSender<Cmd>,
     ) {
-        let (tx_payload, rx_payload) = mpsc::channel::<Vec<u8>>();
-        let (tx_ack, rx_ack) = mpsc::channel::<(u8, KombiAck)>();
-        let (tx_cmd, rx_cmd) = mpsc::channel::<Cmd>();
+        let (tx_payload, mut rx_payload) = unbounded_channel::<Vec<u8>>();
+        let (tx_ack, mut rx_ack) = unbounded_channel::<(u8, KombiAck)>();
+        let (tx_cmd, mut rx_cmd) = unbounded_channel::<Cmd>();
         let s = sender.clone();
 
         let should_reset = Arc::new(AtomicBool::new(false));
         let should_reset_c = should_reset.clone();
 
-        std::thread::spawn(move || {
+        rt.spawn(async move {
             let mut page_state = T::default();
             let mut tx_tracker = PageTxData::new(&s);
             tx_tracker.send(pg.build_pkg_20(&page_state)); // Start the state machine
             println!("AGW Wrapper for page {} started", pg.name());
             let mut allowed_to_send = true;
             loop {
-
                 if should_reset_c.load(Ordering::Relaxed) {
                     should_reset_c.store(false, Ordering::Relaxed);
                     tx_tracker.reset();
@@ -235,7 +235,7 @@ impl AgwPageWrapper {
                 if let KombiAck::Pending(i) = tx_tracker.get_send_state() {
                     // Timeout
                     if i.elapsed().as_millis() > 2000 {
-                        log::error!("Kombi response timeout! Page {}", pg.name());
+                        log::error!("Kombi response timeout! Page {}, pkg 0x{:02X}", pg.name(), tx_tracker.last_sent_pkg);
                         if tx_tracker.get_try_counter() < 3 {
                             tx_tracker.resend();
                         } else {
@@ -254,7 +254,7 @@ impl AgwPageWrapper {
                     log::debug!("{:02X?} from kombi. Page {}", pkg, pg.name());
                     s.send(vec![pg.get_id(), pkg[0], 0x06]).unwrap();
                     // Wait 40ms to avoid sending the next payload before IC can process it
-                    std::thread::sleep(Duration::from_millis(40));
+                    //std::thread::sleep(Duration::from_millis(40));
                     // For now, we just check the package ID, and all the details
                     // are hard coded.
                     match pkg[0] {
@@ -301,7 +301,7 @@ impl AgwPageWrapper {
                         }
                     }
                 }
-                std::thread::sleep(std::time::Duration::from_millis(20));
+                tokio::time::sleep(std::time::Duration::from_millis(40)).await;
             }
         });
 

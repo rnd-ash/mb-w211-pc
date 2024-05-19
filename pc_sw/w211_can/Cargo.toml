@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 packed_struct="0.10.0"
-socketcan="3.3.0"
-socketcan-isotp="1.0.2"
+tokio-socketcan-isotp = "0.1.0"
+tokio-socketcan = "0.3.1"

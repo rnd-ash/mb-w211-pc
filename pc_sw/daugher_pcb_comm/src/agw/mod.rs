@@ -1,7 +1,4 @@
-use std::{
-    sync::{mpsc::{self, Sender}, RwLock, Arc},
-    time::Instant, thread::JoinHandle, borrow::BorrowMut,
-};
+use std::{sync::{Arc, RwLock}, time::Instant};
 
 use self::{bluetooth_manager::{BluetoothManager, BtCommand}, navigation::{NaviPage, NaviPageCmd}, audio_control::AudioManager, keys::{WheelKeyManager, W213WheelKey}, audio::AudioCfgSettings};
 
@@ -10,9 +7,10 @@ mod keys;
 mod pages;
 mod audio_control;
 
-use crate::{agw::audio::{AudioPage, AudioPageCmd, AudioPageState, AudioSymbol}, custom_display_format::CDMIsoTp};
+use crate::{agw::audio::{AudioPage, AudioPageCmd, AudioPageState, AudioSymbol}, custom_display_format::{CDMIsoTp, ToneType, ToneRepeatType}};
 use crate::agw::keys::KombiPage;
 pub use pages::*;
+use tokio::{runtime::{Handle, Runtime}, sync::mpsc::UnboundedSender};
 
 pub mod char_map;
 
@@ -26,9 +24,10 @@ pub enum AgwCommand {
     SetAudioHeaderText(IcText),
     SetAudioSymbols(AudioSymbol, AudioSymbol),
     SendNaviData(NaviPageCmd),
-    ShowCustomDisplay,
+    ShowCustomDisplay(String, u32),
     HideCustomDisplay,
-    UpdateCustomDisplay(String)
+    StopBuzzer,
+    SoundBuzze(ToneType, ToneRepeatType)
 }
 
 /// Audio gateway emulator master
@@ -45,67 +44,55 @@ pub struct AgwEmulator {
     _bluetooth_handler: BluetoothManager,
     /// Wheel key (MRM) input layer
     //key_manager: WheelKeyManager,
-    sender: Sender<AgwCommand>,
+    sender: UnboundedSender<AgwCommand>,
 }
 
 
 impl AgwEmulator {
-    pub fn new(can_name: String, mut vlad: CDMIsoTp, audio_settings: AudioCfgSettings) -> Self {
-        let mut endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 50, 0);
-        let _ = endpoint.set_nonblocking(true);
-        let (sender, receiver) = mpsc::channel::<AgwCommand>();
-        let (tx_isotp, rx_isotp) = mpsc::sync_channel::<Vec<u8>>(10);
+    pub fn new(rt: &Runtime, can_name: String, vlad: CDMIsoTp, audio_settings: AudioCfgSettings) -> Self {
+        let endpoint = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can_name, 0x1D0, 0x1A4, 50, 0);
+        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<AgwCommand>();
+        let (tx_isotp, mut rx_isotp) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
         let current_page = Arc::new(RwLock::new(KombiPage::Other));
         let current_page_c = current_page.clone();
         // Alert IC that AGW has woken up
-        std::thread::spawn(move || {
+        rt.spawn(async move {
+            let handle = Handle::current();
             let audio_page = AudioPage::new(audio_settings);
-            let (a_page, a_msg, a_ack, a_cmd) = AgwPageWrapper::new(tx_isotp.clone(), audio_page);
+            let (a_page, a_msg, a_ack, a_cmd) = AgwPageWrapper::new(tx_isotp.clone(), &handle, audio_page);
             let nav_page = NaviPage::new();
-            let (n_page, n_msg, n_ack, n_cmd) = AgwPageWrapper::new(tx_isotp.clone(), nav_page);
+            let (n_page, n_msg, n_ack, n_cmd) = AgwPageWrapper::new(tx_isotp.clone(), &handle, nav_page);
             let _last_time_send_time = Instant::now();
             let mut ic_awake = false;
             loop {
-                vlad.update();
-                /*
-                if last_time_send_time.elapsed().as_millis() > 250 {
-                    last_time_send_time = Instant::now();
-                    let mut data = [0u8,0,0,0,0,0,0,0];
-                    let time = chrono::Utc::now();
-                    data[0] = (time.year() as u16 >> 8) as u8;
-                    data[1] = (time.year() as u16 & 0xFF) as u8;
-                    data[2] = time.month() as u8;
-                    data[3] = time.day() as u8;
-                    data[4] = time.hour() as u8;
-                    data[5] = time.minute() as u8;
-                    data[6] = ((time.second() * 100) as u16 >> 8) as u8;
-                    data[7] = ((time.second() * 100) as u16 & 0xFF) as u8;
-                    mcu.send_frame(PCCanFrame {
-                        can_bus_tag: CanBus::B,
-                        can_id: 0x339,
-                        dlc: 8,
-                        data,
-                    });
-                }
-                */
-                if let Ok(ic_pkg) = endpoint.read() {
-                    if let Ok(page) = AgwPageId::try_from(ic_pkg[0]) {
-                        let pkgid = ic_pkg[1];
-                        // 3	5	4	F5
-                        if pkgid == 0x04 && ic_pkg[2] == 0xF5 {
-                            ic_awake = true;
-                            // Special package. Ack
-                            log::info!("IC HAS WOKEN UP!");
-                            a_page.reset();
-                            n_page.reset();
-                        } else if ic_pkg.len() == 3 {
-                            if let Ok(status) = KombiAck::try_from(ic_pkg[2]) {
-                                let _ = match page {
-                                    AgwPageId::Audio => { a_ack.send((pkgid, status)) },
-                                    AgwPageId::Navigation => { n_ack.send((pkgid, status)) },
-                                    _ => Ok(()),
-                                };
+
+                tokio::select! {
+                    Ok(ic_pkg) = endpoint.read_packet().unwrap() => {
+                        if let Ok(page) = AgwPageId::try_from(ic_pkg[0]) {
+                            let pkgid = ic_pkg[1];
+                            // 3	5	4	F5
+                            if pkgid == 0x04 && ic_pkg[2] == 0xF5 {
+                                ic_awake = true;
+                                // Special package. Ack
+                                log::info!("IC HAS WOKEN UP!");
+                                a_page.reset();
+                                n_page.reset();
+                            } else if ic_pkg.len() == 3 {
+                                if let Ok(status) = KombiAck::try_from(ic_pkg[2]) {
+                                    let _ = match page {
+                                        AgwPageId::Audio => { a_ack.send((pkgid, status)) },
+                                        AgwPageId::Navigation => { n_ack.send((pkgid, status)) },
+                                        _ => Ok(()),
+                                    };
+                                } else {
+                                    let _ = match page {
+                                        AgwPageId::Audio => { a_msg.send(ic_pkg[1..].to_vec()) },
+                                        AgwPageId::Navigation => { n_msg.send(ic_pkg[1..].to_vec()) },
+                                        _ => Ok(()),
+                                    };
+                                }
                             } else {
+                                // It is a payload
                                 let _ = match page {
                                     AgwPageId::Audio => { a_msg.send(ic_pkg[1..].to_vec()) },
                                     AgwPageId::Navigation => { n_msg.send(ic_pkg[1..].to_vec()) },
@@ -113,71 +100,64 @@ impl AgwEmulator {
                                 };
                             }
                         } else {
-                            // It is a payload
-                            let _ = match page {
-                                AgwPageId::Audio => { a_msg.send(ic_pkg[1..].to_vec()) },
-                                AgwPageId::Navigation => { n_msg.send(ic_pkg[1..].to_vec()) },
-                                _ => Ok(()),
-                            };
+                            log::error!(
+                                "Unknown page 0x{:02X}!. Payload was {:02X?}",
+                                ic_pkg[0],
+                                ic_pkg
+                            )
                         }
-                    } else {
-                        log::error!(
-                            "Unknown page 0x{:02X}!. Payload was {:02X?}",
-                            ic_pkg[0],
-                            ic_pkg
-                        )
+                    },
+                    Some(to_send) = rx_isotp.recv() => {
+                        let _ = endpoint.write_packet(&to_send).unwrap().await;
+                    },
+                    Some(cmd) = receiver.recv() => {
+                        let _ = match cmd {
+                            AgwCommand::Wakeup => {
+                            }
+                            AgwCommand::SetAudioPage(p) => {
+                                let _ = a_cmd.send(AudioPageCmd::SetPage(p));
+                            }
+                            AgwCommand::SetAudioBodyText(t) => {
+                                let _ = a_cmd.send(AudioPageCmd::SetBody(t));
+                            }
+                            AgwCommand::SetAudioHeaderText(t) => {
+                                let _ = a_cmd.send(AudioPageCmd::SetHeader(t));
+                            }
+                            AgwCommand::SetAudioSymbols(u, d) => {
+                                let _ = a_cmd.send(AudioPageCmd::SetIcons(u, d));
+                            }
+                            AgwCommand::SendNaviData(cr) => {
+                                let _ = n_cmd.send(cr);
+                            }
+                            AgwCommand::TrackUpdate(name) => {
+                                if *current_page.read().unwrap() != KombiPage::Audio {
+                                    vlad.notify_track_change(&name);
+                                }
+                            }
+                            AgwCommand::ShowCustomDisplay(text, duration_ms) => {
+                                vlad.show_display(text, duration_ms)
+                            },
+                            AgwCommand::HideCustomDisplay => {
+                                vlad.stop_display()
+                            },
+                            AgwCommand::StopBuzzer => {
+                                vlad.stop_buzzer()
+                            },
+                            AgwCommand::SoundBuzze(tone, repeat) => {
+                                vlad.sound_buzzer(tone, repeat)
+                            },
+                        };
                     }
                 }
                 if ic_awake {
-                    let _ = endpoint.write(&[0x05, 0x04, 0x06]);
+                    let _ = endpoint.write_packet(&[0x05, 0x04, 0x06]).unwrap().await;
                     ic_awake = false;
                 }
-                if let Ok(to_send) = rx_isotp.try_recv() {
-                    if endpoint.write(&to_send).is_ok() {
-                        std::thread::sleep(std::time::Duration::from_millis(80))
-                    }
-                }
-                if let Ok(cmd) = receiver.try_recv() {
-                    let _ = match cmd {
-                        AgwCommand::Wakeup => {
-                        }
-                        AgwCommand::SetAudioPage(p) => {
-                            let _ = a_cmd.send(AudioPageCmd::SetPage(p));
-                        }
-                        AgwCommand::SetAudioBodyText(t) => {
-                            let _ = a_cmd.send(AudioPageCmd::SetBody(t));
-                        }
-                        AgwCommand::SetAudioHeaderText(t) => {
-                            let _ = a_cmd.send(AudioPageCmd::SetHeader(t));
-                        }
-                        AgwCommand::SetAudioSymbols(u, d) => {
-                            let _ = a_cmd.send(AudioPageCmd::SetIcons(u, d));
-                        }
-                        AgwCommand::SendNaviData(cr) => {
-                            let _ = n_cmd.send(cr);
-                        }
-                        AgwCommand::TrackUpdate(name) => {
-                            if *current_page.read().unwrap() != KombiPage::Audio {
-                                vlad.notify_track_change(&name);
-                            }
-                        }
-                        AgwCommand::ShowCustomDisplay => {
-                            vlad.show_display(u32::MAX)
-                        },
-                        AgwCommand::HideCustomDisplay => {
-                            vlad.stop_display()
-                        },
-                        AgwCommand::UpdateCustomDisplay(s) => {
-                            vlad.update_buffer_live(&s)
-                        },
-                    };
-                }
-                std::thread::sleep(std::time::Duration::from_millis(10));
             }
         });
-        let bt = BluetoothManager::new(sender.clone());
+        let bt = BluetoothManager::new(sender.clone(), rt.handle());
         let bt_c = bt.clone();
-        let key_manager = WheelKeyManager::new(can_name.clone());
+        let mut key_manager = WheelKeyManager::new(can_name.clone());
         //let key_manager_c = key_manager.clone();
         let _t_plus = Instant::now();
         let _t_minus = Instant::now();
@@ -186,22 +166,21 @@ impl AgwEmulator {
         let mixer_data : Arc<RwLock<(f32,f32,f32,f32)>> = Arc::new(RwLock::new((1.0, 1.0, 1.0, 1.0)));
         let _mixer_data_c = mixer_data.clone();
 
-        std::thread::spawn(move|| {
+        rt.spawn(async move {
             let mut mgr = AudioManager::new();
-            let _v_inc = 500;
             let mut muted = false;
             loop {
                 let page = key_manager.current_page();
                 *current_page_c.write().unwrap() = page;
-                if let Some(key) = key_manager.event() {
+                if let Some(key) = key_manager.event().await {
                     match key {
                         W213WheelKey::VolUp => {
                             muted = false;
-                            mgr.offset_volume(0.005);
+                            mgr.offset_volume(300);
                         },
                         W213WheelKey::VolDown => {
                             muted = false;
-                            mgr.offset_volume(-0.005);
+                            mgr.offset_volume(-300);
                         },
                         W213WheelKey::Mute => {
                             muted = !muted;
@@ -226,7 +205,6 @@ impl AgwEmulator {
                         _ => {}
                     }
                 }
-                std::thread::sleep(std::time::Duration::from_millis(10));
             }
         });
 

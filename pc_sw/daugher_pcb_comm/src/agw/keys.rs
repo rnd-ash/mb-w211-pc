@@ -1,10 +1,12 @@
 use std::sync::{
         atomic::{AtomicU8, Ordering},
-        Arc, mpsc,
+        Arc
     };
 
 
-use w211_can::{canbus::CanBus, canb::{MRM_A2, KOMBI_A5}, socketcan::{Socket, SocketOptions, CanFilter, EmbeddedFrame}, socketcan_isotp::{Id, StandardId}};
+use futures_util::StreamExt;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use w211_can::{canb::{KOMBI_A5, MRM_A2}, canbus::CanBus, tokio_socketcan::CANFilter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum W213WheelEvent {
@@ -106,7 +108,7 @@ pub enum KombiPage {
 #[derive(Debug)]
 pub struct WheelKeyManager {
     page: Arc<AtomicU8>,
-    key_press: std::sync::mpsc::Receiver<W213WheelKey>
+    key_press: UnboundedReceiver<W213WheelKey>
 }
 
 pub fn move_mouse(pos: u8, is_x: bool) {
@@ -118,88 +120,86 @@ pub fn move_mouse(pos: u8, is_x: bool) {
     for _ in 0..a {
         let s = (pos/a)*2;
         let (xmove, ymove) = if is_x {(s, 0)} else {(0,s)};
-        println!("{:?}",std::process::Command::new("xdotool")
+        std::process::Command::new("xdotool")
         .args([
             "mousemove_relative",
             "--",
             &format!("{xmove}"),
             &format!("{ymove}")
-        ]).output());
+        ]).output();
     }
 }
 
 pub fn click_mouse() {
-    println!("{:?}",std::process::Command::new("xdotool")
+    std::process::Command::new("xdotool")
         .args([
             "click",
             "1"
-        ]).output());
+        ]).output();
 }
-
-const MRM_CAN_ID: Id = Id::Standard(unsafe { StandardId::new_unchecked(MRM_A2::get_canid()) });
-const  IC_CAN_ID: Id = Id::Standard(unsafe { StandardId::new_unchecked(KOMBI_A5::get_canid()) });
 
 impl WheelKeyManager {
     pub fn new(can_name: String) -> Self {
         let page_ref = Arc::new(AtomicU8::new(0));
         let page_ref_c = page_ref.clone();
-        let (tx, rx) = mpsc::channel::<W213WheelKey>();
-        std::thread::spawn(move || {
-            let can = CanBus::create_can_socket_with_name(&can_name);
-            let _ = can.set_nonblocking(false);
+        let (tx, rx) = unbounded_channel::<W213WheelKey>();
+        tokio::spawn(async move {
+            let mut can = CanBus::create_can_socket_with_name(&can_name).unwrap();
             let filters = [
-                CanFilter::new(0x01CA, 0xFFF),
-                CanFilter::new(0x01A8, 0xFFF)
+                CANFilter::new(0x01CA, 0xFFF).unwrap(),
+                CANFilter::new(0x01A8, 0xFFF).unwrap()
             ];
-            let _ = can.set_filters(&filters);
+            can.set_filter(&filters).unwrap();
             let mut last_evt = W213WheelEvent::Idle;
             let mut prev_evt = W213WheelEvent::Idle;
-            while let Ok(frame) = can.read_frame() {
-                let data = frame.data();
-                if frame.id() == IC_CAN_ID {
-                    if data != [0x00, 0x00, 0x00, 0x00] {
-                        page_ref_c.store(data[0], Ordering::Relaxed);
-                    }
-                    // Volume works differently, we don't care if its the same
-                    // since volume works as a scroll wheel
-                    if last_evt != prev_evt {
-                        prev_evt = last_evt;
-                        match last_evt {
-                            W213WheelEvent::TouchPadX(x) => {
-                                move_mouse(x, true);
-                            },
-                            W213WheelEvent::TouchPadY(y) => {
-                                move_mouse(y, false);
-                            },
-                            W213WheelEvent::Key(k) if k == W213WheelKey::TouchPad => {
-                                click_mouse();
-                            },
-                            W213WheelEvent::Key(k) => {
-                                let _ = tx.send(k);
-                            }
-                            W213WheelEvent::Idle => (),
+            loop {
+                if let Some(Ok(frame)) = can.next().await {
+                    let data = frame.data();
+                    if frame.id() == KOMBI_A5::get_canid() as u32 {
+                        if data != [0x00, 0x00, 0x00, 0x00] {
+                            page_ref_c.store(data[0], Ordering::Relaxed);
                         }
-                    } else {
-                        // If duplicate data
-                        match last_evt {
-                            W213WheelEvent::Key(k) => {
-                                if k == W213WheelKey::VolUp || k == W213WheelKey::VolDown {
+                        // Volume works differently, we don't care if its the same
+                        // since volume works as a scroll wheel
+                        if last_evt != prev_evt {
+                            prev_evt = last_evt;
+                            match last_evt {
+                                W213WheelEvent::TouchPadX(x) => {
+                                    move_mouse(x, true);
+                                },
+                                W213WheelEvent::TouchPadY(y) => {
+                                    move_mouse(y, false);
+                                },
+                                W213WheelEvent::Key(k) if k == W213WheelKey::TouchPad => {
+                                    click_mouse();
+                                },
+                                W213WheelEvent::Key(k) => {
                                     let _ = tx.send(k);
                                 }
-                            },
-                            W213WheelEvent::TouchPadX(x) => {
-                                move_mouse(x, true);
-                            },
-                            W213WheelEvent::TouchPadY(y) => {
-                                move_mouse(y, false);
-                            },
-                            _ => {}
+                                W213WheelEvent::Idle => (),
+                            }
+                        } else {
+                            // If duplicate data
+                            match last_evt {
+                                W213WheelEvent::Key(k) => {
+                                    if k == W213WheelKey::VolUp || k == W213WheelKey::VolDown {
+                                        let _ = tx.send(k);
+                                    }
+                                },
+                                W213WheelEvent::TouchPadX(x) => {
+                                    move_mouse(x, true);
+                                },
+                                W213WheelEvent::TouchPadY(y) => {
+                                    move_mouse(y, false);
+                                },
+                                _ => {}
+                            }
                         }
+                    } else if frame.id() == MRM_A2::get_canid() as u32 {
+                        last_evt = W213WheelEvent::from([data[0], data[1]]);
+                    } else {
+                        println!("UNKNOWN Wheel frame! {:02X?}", frame)
                     }
-                } else if frame.id() == MRM_CAN_ID {
-                    last_evt = W213WheelEvent::from([data[0], data[1]]);
-                } else {
-                    println!("UNKNOWN Wheel frame! {:02X?}", frame)
                 }
             }
         });
@@ -219,8 +219,8 @@ impl WheelKeyManager {
         }
     }
 
-    pub fn event(&self) -> Option<W213WheelKey> {
-        self.key_press.try_recv().ok()
+    pub async fn event(&mut self) -> Option<W213WheelKey> {
+        self.key_press.recv().await
     }
 
 }

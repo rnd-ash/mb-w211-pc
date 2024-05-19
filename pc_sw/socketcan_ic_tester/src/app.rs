@@ -1,12 +1,15 @@
-use std::{time::Duration, fmt::format};
+use std::{borrow::Borrow, fmt::format, sync::Arc, time::Duration};
 
-use agw_lib::{agw::{AgwEmulator, self, TextFmtFlags, navigation::{DistanceDisplay, NaviPageCmd, DistanceUnit}, AgwCommand}, w211_can::{self, socketcan::{CanSocket, Socket}, canb::{MRM_A1, MRM_A2}}, custom_display_format::CDMIsoTp};
+use agw_lib::{agw::{self, navigation::{DistanceDisplay, DistanceUnit, NaviPageCmd}, AgwCommand, AgwEmulator, TextFmtFlags}, custom_display_format::{CDMIsoTp, ToneRepeatType, ToneType}, w211_can::{self, canb::{MRM_A1, MRM_A2}, tokio_socketcan::CANSocket}};
 use eframe::egui::{CentralPanel, DragValue, ComboBox};
 use agw_lib::agw::audio::AudioCfgSettings;
+use tokio::runtime::Runtime;
+
+//use crate::tetris::{GAME_GRID, GAME_W, GAME_H};
 
 pub struct App {
     agw: AgwEmulator,
-    canb: CanSocket,
+    canb: Arc<CANSocket>,
     audio_body: String,
     audio_header: String,
     // Navi info
@@ -15,23 +18,28 @@ pub struct App {
     target_road: String,
     custom_shown: bool,
     custom_buffer: String,
-    audio_body_flags: TextFmtFlags
+    audio_body_flags: TextFmtFlags,
+    tone: ToneType,
+    tone_repeat: ToneRepeatType,
+    tone_running: bool
 }
 
 impl App {
-    pub fn new(can: String) -> Self {
-        let vlad = CDMIsoTp::new(can.clone());
+    pub fn new(runtime: &Runtime, can: String) -> Self {
+
+
+        let vlad: CDMIsoTp = CDMIsoTp::new(&runtime, can.clone());
 
         let audio_settings = AudioCfgSettings {
             auto_scroll: false,
         };
 
-        let agw = AgwEmulator::new(can.clone(), vlad, audio_settings);
+        let agw = AgwEmulator::new(&runtime, can.clone(), vlad, audio_settings);
 
-        let canb = w211_can::canbus::CanBus::create_can_socket_with_name(&can);
+        let canb = w211_can::canbus::CanBus::create_can_socket_with_name(&can).unwrap();
         println!("CAN name is {}", can);
         Self{
-            canb,
+            canb: Arc::new(canb),
             agw,
             audio_body: String::default(),
             audio_header: String::default(),
@@ -40,12 +48,16 @@ impl App {
             target_road: "That road".into(),
             custom_buffer: "HELLO".into(),
             custom_shown: false,
-            audio_body_flags: TextFmtFlags::empty()
+            audio_body_flags: TextFmtFlags::empty(),
+            tone: ToneType::Chime,
+            tone_repeat: ToneRepeatType::None,
+            tone_running: false
         }
     }
 }
 
 impl eframe::App for App {
+
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         CentralPanel::default().show(ctx, |ui| {
             ui.label("Navigation buttons");
@@ -70,20 +82,23 @@ impl eframe::App for App {
             if ui.button("Vol-").clicked() {
                 mrm.set_WIPPE_3_2(true);
             }
-
             if mrm.0 != 0 {
                 self.custom_shown = false;
-                for i in 0..2 {
-                    let f = w211_can::canbus::u64_to_frame(MRM_A2::get_canid(), mrm.0, 2);
-                    self.canb.write_frame(&f);
-                    std::thread::sleep(Duration::from_millis(20));
-                }
-                for i in 0..2 {
-                    let f = w211_can::canbus::u64_to_frame(MRM_A2::get_canid(), 0, 2);
-                    self.canb.write_frame(&f);
-                    std::thread::sleep(Duration::from_millis(20));
-                }
+                let canb = self.canb.clone();
+                tokio::spawn(async move {
+                    for _ in 0..2 {
+                        let f = w211_can::canbus::u64_to_frame(MRM_A2::get_canid(), mrm.0, 2);
+                        canb.write_frame(f).unwrap().await;
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                    for _ in 0..2 {
+                        let f = w211_can::canbus::u64_to_frame(MRM_A2::get_canid(), 0, 2);
+                        canb.write_frame(f).unwrap().await;
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                });
             }
+            let w = ui.available_width();
             ui.collapsing("AUDIO PAGE", |ui| {
                 ui.horizontal(|r| {
                     r.label("AUDIO Header:");
@@ -182,27 +197,63 @@ impl eframe::App for App {
 
             ui.collapsing("CUSTOM PAGE", |ui| {
                 let now = self.custom_buffer.clone();
-                ui.text_edit_singleline(&mut self.custom_buffer);
+                ui.code_editor(&mut self.custom_buffer);
+                ui.separator();
+                ui.strong("Command Syntax");
+                let syntax_parse_res = generate_syntax_from_custom_string(&self.custom_buffer);
+                match syntax_parse_res.borrow() {
+                    Ok(commands) => {
+                        for (idx, cmd) in commands.iter().enumerate() {
+                            ui.label(format!("{}. {}", idx+1, cmd));
+                        }
+                    },
+                    Err(e) => {
+                        ui.label(format!("String error: {e}"));
+                    },
+                }
+                ui.separator();
 
-                let check_res = check_custom_string(&self.custom_buffer);
                 if now != self.custom_buffer && self.custom_shown {
                     // Live update buffer
                     println!("{}", self.custom_buffer.clone());
-                    if check_res.is_ok() {
-                        self.agw.send_agw_command(AgwCommand::UpdateCustomDisplay(self.custom_buffer.clone()));
+                    if syntax_parse_res.is_ok() {
+                        self.agw.send_agw_command(AgwCommand::ShowCustomDisplay(self.custom_buffer.clone(), u32::MAX));
                     }
                     //self.agw.send_agw_command(AgwCommand::ShowCustomDisplay);
                 }
-                if let Err(e) = check_res {
-                    ui.label(format!("String error: {e}"));
-                }
+                
 
                 let shown_now = self.custom_shown;
                 ui.checkbox(&mut self.custom_shown, "Show display");
                 if shown_now != self.custom_shown {
                     match self.custom_shown {
-                        true => self.agw.send_agw_command(AgwCommand::ShowCustomDisplay),
+                        true => self.agw.send_agw_command(AgwCommand::ShowCustomDisplay(self.custom_buffer.clone(), u32::MAX)),//self.agw.send_agw_command(AgwCommand::ShowCustomDisplay),
                         false => self.agw.send_agw_command(AgwCommand::HideCustomDisplay)
+                    }
+                }
+
+                if self.tone_running {
+                    if ui.button("Stop tone").clicked() {
+                        self.tone_running = false;
+                        self.agw.send_agw_command(AgwCommand::StopBuzzer)
+                    }
+                } else {
+                    ui.horizontal(|row| {
+                        row.selectable_value(&mut self.tone, ToneType::Chime, "Chime");
+                        row.selectable_value(&mut self.tone, ToneType::ShortBeep, "Short beep");
+                        row.selectable_value(&mut self.tone, ToneType::LongBeep, "Long beep");
+                    });
+                    ui.horizontal(|row| {
+                        row.selectable_value(&mut self.tone_repeat, ToneRepeatType::None, "No repeat");
+                        row.selectable_value(&mut self.tone_repeat, ToneRepeatType::Slow, "Slow");
+                        row.selectable_value(&mut self.tone_repeat, ToneRepeatType::Middle, "Medium");
+                        row.selectable_value(&mut self.tone_repeat, ToneRepeatType::Fast, "Fast");
+                    });
+                    if ui.button("Test tone").clicked() {
+                        if self.tone_repeat != ToneRepeatType::None {
+                            self.tone_running = true;
+                        }
+                        self.agw.send_agw_command(AgwCommand::SoundBuzze(self.tone, self.tone_repeat));
                     }
                 }
             });
@@ -212,18 +263,101 @@ impl eframe::App for App {
     }
 }
 
-fn check_command(c: char, exp_len: usize, buffer: &str) -> Result<(), String> {
-    if buffer.len() < exp_len+1 {
+fn check_command(c: char, exp_len: usize, buffer: &str) -> Result<Vec<String>, String> {
+    let mut syntax_list = Vec::new();
+    if buffer.len() < exp_len+1 && exp_len != 0 {
         return Err(format!("Command '{}' expects {} digit hex, found {}", c, exp_len, buffer.len() - 1))
     } else {
-        let matching = &buffer[1..exp_len+1];
-        u32::from_str_radix(matching, 16)
-            .map(|_| ())
-            .map_err(|_| format!("Arg '{}' for command '{}' is not valid hex", matching, c))
+        let arg_as_int = if exp_len == 0 {
+            0
+        } else {
+            let matching = &buffer[1..exp_len+1];
+            u32::from_str_radix(matching, 16)
+                .map_err(|_| format!("Arg '{}' for command '{}' is not valid hex", matching, c))?
+        };
+        syntax_list.push(match c {
+            'B' => format!("Draw image ID {arg_as_int}"),
+            'C' => format!("Refresh display. Arg {arg_as_int:01X}"),
+            'E' => format!("Set ASCII table to table ID '{arg_as_int}'"),
+            'F' => {
+                if arg_as_int == 0 {
+                    format!("-- End of function apply")
+                } else {
+                    format!("-- Start of function apply (Function ID {arg_as_int})")
+                }
+            }
+            'G' => format!("Set font to ID '{arg_as_int}'"),
+            'H' => format!("Override text height to {arg_as_int} pixels"),
+            'I' => {
+                let mut s = format!("Status lines - Set rows to clear: ");
+                let mut v = Vec::new();
+                if arg_as_int & 0b1 != 0 {
+                    v.push("Temperature")
+                }
+                if arg_as_int & 0b10 != 0 {
+                    v.push("Trip")
+                }
+                if arg_as_int & 0b100 != 0 {
+                    v.push("Odometer")
+                }
+                if arg_as_int & 0b100 != 0 {
+                    v.push("Gear display")
+                }
+                s.push_str(&format!("{v:?}"));
+                s
+            },
+            'L' => format!("New line"),
+            'N' => format!("Draw navigation image ID {arg_as_int}"),
+            'P' => {
+                let x = u16::from_str_radix(&buffer[1..3], 16).unwrap();
+                let y = u16::from_str_radix(&buffer[3..5], 16).unwrap();
+                format!("Set cursor to position ({x},{y})")
+            },
+            'Q' => {
+                let x = u16::from_str_radix(&buffer[1..3], 16).unwrap();
+                let y = u16::from_str_radix(&buffer[3..5], 16).unwrap();
+                format!("Draw rectange from previous cursor position to ({x},{y})")
+            }
+            'R' => format!("Set text justification to right"),
+            'S' => format!("Show emedded string ID {arg_as_int}"),
+            'T' => {
+                let mut s = format!("Override drawing of next element: ");
+                let mut v = Vec::new();
+                if arg_as_int == 0 {
+                    v.push("Normal draw")
+                } else {
+                    if arg_as_int & 0b1 != 0 {
+                        v.push("Hide element")
+                    }
+                    if arg_as_int & 0b10 != 0 {
+                        v.push("Highlight")
+                    }
+                    if arg_as_int & 0b100 != 0 {
+                        v.push("Inver background")
+                    }
+                }
+                s.push_str(&format!("{v:?}"));
+                s
+            }
+            'V' => {
+                let x = u16::from_str_radix(&buffer[1..3], 16).unwrap();
+                let y = u16::from_str_radix(&buffer[3..5], 16).unwrap();
+                format!("Draw line from previous cursor position to ({x},{y})")
+            }
+            'X' => format!("Move cursor horizontally by {arg_as_int} pixels"),
+            'Z' => format!("Set text justification to center"),
+            _ => format!("Command ~{c}")
+        });
+        if buffer.len() > exp_len + 1 {
+            // Text string
+            syntax_list.push(format!("Draw text '{}'", &buffer[exp_len+1..]))
+        }
+
+        Ok(syntax_list)
     }
 }
 
-pub fn check_custom_string(s: &str) -> Result<(), String> {
+pub fn generate_syntax_from_custom_string(s: &str) -> Result<Vec<String>, String> {
     let commands = s.split("~").collect::<Vec<&str>>();
     if commands.len() == 0 {
         return Err("Empty command string".into());
@@ -231,41 +365,26 @@ pub fn check_custom_string(s: &str) -> Result<(), String> {
     if !commands[0].is_empty() {
         return Err("String must start with format command string".into());
     }
+    let mut syntax_list = Vec::new();
     for command in &commands[1..] {
         if command.len() == 0 {
             return Err("Empty command".into());
         }
-        let res = match command.chars().next().unwrap() {
-            'P' => check_command('P', 4, command), // Pos xx yy
-            'B' => check_command('B', 3, command), // Image xxx
-            'N' => check_command('N', 3, command), // Navi image xxx
-            'S' => check_command('S', 3, command), // String ID xxx
-            'Q' => check_command('Q', 3, command), // Rect. Coords xxx
-            'I' => check_command('I', 1, command), // Line state
-            'C' => check_command('C', 1, command), // Screen clear
-            'U' => check_command('U', 1, command), // Screen colour
-            'G' => check_command('G', 1, command), // Font ID
-            '*' => check_command('*', 3, command), // Radio str xxx
-            'T' => check_command('T', 1, command), // Draw flags
-            'Y' => check_command('Y', 1, command), // ART ring flags
-
-            'F' => check_command('F', 2, command), // ??
-            'H' => check_command('H', 2, command), // Height override
-            'J' => check_command('J', 1, command),
-
-            '=' => check_command('=', 2, command), // 
-            '@' => check_command('@', 2, command), // 
-
-            '<' => check_command('<', 4, command), // 
-            '-' => check_command('-', 4, command), //
-            'V' => check_command('V', 4, command), // 
-
-            'Z' | 'R' | '/' | 'A' | 'E' => Ok(()), // Format commands (Standalone)
-            x => Err(format!("Unknown command {x}"))
-        };
-        if res.is_err() {
-            return res;
+        let c = command.chars().next().unwrap();
+        let command_len = match c {
+            //'E' | 'L' | 'R' | 'Z' | '/' => Ok(0),
+            'C' | 'G' | 'I' | 'J' | 'O' | 'T'| '>' | ';' => Ok::<u32, String>(1),
+            'F' | 'H' | '=' | '@' | 'X' => Ok(2),
+            'B' | 'N' | 'S' => Ok(3),
+            'D' | 'P' | 'Q' | 'V' | '<' | '-' | '?' => Ok(4),
+            _ => Ok(0)
+        }?;
+        if command_len != 0 {
+            // Check size
+            for c in check_command(c, command_len as usize, command)? {
+                syntax_list.push(c);
+            }
         }
     }
-    Ok(())
+    Ok(syntax_list)
 }

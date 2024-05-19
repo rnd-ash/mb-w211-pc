@@ -10,15 +10,16 @@ name="agw_lib"
 main="src/lib.rs"
 
 [dependencies]
-dbus="0.9.6"
+dbus={version = "0.9.6", features=["futures"]}
+dbus-tokio="0.7.6"
 bitflags="2.4.1"
 log="0.4.17"
-env_logger="0.10.0"
+env_logger="0.11.3"
 tokio={ version = "1.23.0", features = ["full"] }
-futures="0.3.25"
-bluer={version="0.16.1", features=["bluetoothd"]}
+futures-util = "0.3.30"
+bluer={version="0.17.1", features=["bluetoothd"]}
 chrono = "0.4.23"
-sysinfo="0.29.10"
+sysinfo="0.30.11"
 input-linux = "0.6.0"
-nix="0.27.1"
+nix="0.28.0"
 w211_can = { path="../w211_can" }

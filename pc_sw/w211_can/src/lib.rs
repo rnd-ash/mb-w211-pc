@@ -6,6 +6,6 @@ pub mod canc;
 
 pub use packed_struct;
 
-pub use socketcan;
-pub use socketcan_isotp;
+pub use tokio_socketcan;
+pub use tokio_socketcan_isotp;
 

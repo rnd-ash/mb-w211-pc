@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'socketcan_ic_tester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=socketcan_ic_tester",
+                    "--package=socketcan_ic_tester"
+                ],
+                "filter": {
+                    "name": "socketcan_ic_tester",
+                    "kind": "bin"
+                }
+            },
+            "args": ["can0"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'socketcan_ic_tester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=socketcan_ic_tester",
+                    "--package=socketcan_ic_tester"
+                ],
+                "filter": {
+                    "name": "socketcan_ic_tester",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

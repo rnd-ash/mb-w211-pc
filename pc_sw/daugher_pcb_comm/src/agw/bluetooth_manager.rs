@@ -1,11 +1,13 @@
 use crate::agw::{AgwCommand, AudioPageState, AudioSymbol, IcText, TextFmtFlags};
 
-use bluer::Device;
-use dbus::arg::{PropMap, RefArg};
-use dbus::blocking::stdintf::org_freedesktop_dbus::Properties;
-use dbus::{blocking::Connection, message::MatchRule, Error};
+use bluer::{Adapter, Device};
+use dbus::arg::PropMap;
+use dbus::message::MatchRule;
+use dbus::nonblock::stdintf::org_freedesktop_dbus::Properties;
+use dbus::nonblock::{LocalConnection, Proxy, SyncConnection};
+use tokio::runtime::Handle;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 
-use std::sync::mpsc::{Sender, self};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -21,16 +23,16 @@ pub enum BtCommand {
 #[derive(Debug, Clone)]
 pub struct BluetoothManager {
     connected_device: Arc<RwLock<Option<String>>>,
-    sender: mpsc::Sender<BtCommand>
+    sender: UnboundedSender<BtCommand>
 }
 
 impl BluetoothManager {
-    pub fn new(sender: Sender<AgwCommand>) -> Self {
+    pub fn new(sender: UnboundedSender<AgwCommand>, handle: &Handle) -> Self {
         let connected_device = Arc::new(RwLock::new(None));
         let connected_device_t = connected_device.clone();
 
-        let (sender_bt, receiver_bt) = mpsc::channel::<BtCommand>();
-        std::thread::spawn(move || {
+        let (sender_bt, mut receiver_bt) = unbounded_channel::<BtCommand>();
+        handle.spawn(async move {
             let bt_idle_state: AudioPageState = AudioPageState {
                 header_text: IcText {
                     format: TextFmtFlags::LEFT,
@@ -43,133 +45,112 @@ impl BluetoothManager {
                 symbol_top: AudioSymbol::None,
                 symbol_bottom: AudioSymbol::None,
             };
-
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
+            
             log::debug!("Waiting for bluetooth");
-            let adapter = rt.block_on(async {
-                let session = bluer::Session::new().await.unwrap();
-                loop {
-                    if let Ok(a) = session.default_adapter().await {
-                        return a;
-                    }
+            let session = bluer::Session::new().await.unwrap();
+            let adapter: Adapter = loop {
+                if let Ok(a) = session.default_adapter().await {
+                    break a;
                 }
-            });
+            };
             log::info!("Bluetooth now up!");
             let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
-            let connection = Connection::new_system().unwrap();
-            let _rule = MatchRule::new();
-            let mut dev_name: Option<String> = None;
+            let (resource, connection) = dbus_tokio::connection::new_system_sync().unwrap();
+            let _handle = tokio::spawn(async {
+                let err = resource.await;
+                panic!("Lost connection to D-Bus: {}", err);
+            });
+
             let mut track_name: Option<String> = None;
+            let mut dbus: Option<Proxy<Arc<SyncConnection>>> = None;
+            let mut last_device: Option<(String, String)> = None;
             loop {
-                let mut act = false;
-                let mut dev: Option<Device> = None;
-                rt.block_on(async {
-                    for addr in adapter.device_addresses().await.unwrap() {
-                        if let Ok(d) = adapter.device(addr) {
-                            if d.is_connected().await.unwrap_or(false) {
-                                dev_name = d.name().await.unwrap();
-                                dev = Some(d);
-                                break;
-                            }
+                let mut device: Option<(String, String)> = None;
+                for addr in adapter.device_addresses().await.unwrap() {
+                    if let Ok(d) = adapter.device(addr) {
+                        if d.is_connected().await.unwrap_or(false) {
+                            let addr = d.address().to_string().replace(":", "_");
+                            let name = d.name().await.unwrap().unwrap_or(addr.clone());
+                            device = Some((addr, name));
+                            break;
                         }
                     }
-                });
-                if *connected_device_t.read().unwrap() != dev_name {
-                    log::info!("Now connected to {:?}", dev_name);
-                    if connected_device_t.read().unwrap().is_some() != dev_name.is_some() {
-                        if dev_name.is_none() {
-                            let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
-                            track_name = None;
-                        } else {
-                            let _ = sender.send(AgwCommand::SetAudioPage(AudioPageState {
-                                header_text: IcText {
-                                    format: TextFmtFlags::LEFT,
-                                    text: "Bluetooth".to_string(),
-                                },
-                                body_text: IcText {
-                                    format: TextFmtFlags::CENTER,
-                                    text: format!("Connected to {}", dev_name.clone().unwrap()),
-                                },
-                                symbol_top: AudioSymbol::None,
-                                symbol_bottom: AudioSymbol::None,
-                            }));
-                        }
-                    } else {
-                        if dev_name.is_none() {
-                            let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
-                        } else {
-                            // Just device name changed
-                            let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
+                }
+                if last_device != device {
+                    // Device change
+                    if let Some((addr, name)) = &device {
+                        log::info!("Now connected to {} at address {}", name, addr);
+                        dbus = Some(
+                            Proxy::new(
+                                SERVICE, 
+                                format!("/org/bluez/hci0/dev_{}/player0", addr), 
+                                Duration::from_millis(2000), 
+                                connection.clone()
+                            )
+                        );
+                        let _ = sender.send(AgwCommand::SetAudioPage(AudioPageState {
+                            header_text: IcText {
+                                format: TextFmtFlags::LEFT,
+                                text: "Bluetooth".to_string(),
+                            },
+                            body_text: IcText {
                                 format: TextFmtFlags::CENTER,
-                                text: format!("Connected to {}", dev_name.clone().unwrap()),
-                            }));
-                        }
+                                text: format!("Connected to {}", name.clone()),
+                            },
+                            symbol_top: AudioSymbol::None,
+                            symbol_bottom: AudioSymbol::None,
+                        }));
+
+                    } else {
+                        // Disconnected
+                        log::info!("Bluetooth disconnected");
+                        let _ = sender.send(AgwCommand::SetAudioPage(bt_idle_state.clone()));
+                        track_name = None;
+                        dbus = None;
                     }
-
-                    *connected_device_t.write().unwrap() = dev_name.clone();
-
-                    let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
-                        format: TextFmtFlags::CENTER,
-                        text: dev_name.clone().unwrap_or_else(|| "No device".to_string()),
-                    })).and_then(|_| {
-                        sender.send(AgwCommand::SetAudioSymbols(
-                            AudioSymbol::None,
-                            AudioSymbol::None,
-                        ))
-                    });
                 }
-                if let Some(device) = dev {
-                    let addr = device.address().to_string().replace(":", "_");
-                    let proxy = connection.with_proxy(
-                        SERVICE,
-                        format!("/org/bluez/hci0/dev_{}/player0", addr),
-                        Duration::from_millis(1000),
-                    );
-                    if let Ok(meta) = proxy.get::<PropMap>("org.bluez.MediaPlayer1", "Track") {
-                        act = true;
-                        if let Some(track) = meta.get_key_value("Title") {
-                            let t = Some(track.1.as_str().unwrap().to_string());
-                            if t != track_name {
-                                track_name = t;
-                                let name = track_name.clone().unwrap();
-                                println!("New track {}", name);
-                                let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
-                                    format: TextFmtFlags::CENTER,
-                                    text: name.clone(),
-                                })).and_then(|_| {
-                                    sender.send(AgwCommand::TrackUpdate(name.clone()))
-                                }).and_then(|_| {
-                                    if name.is_empty() {
-                                        sender.send(AgwCommand::SetAudioSymbols(
-                                            AudioSymbol::None,
-                                            AudioSymbol::None,
-                                        ))
-                                    } else {
-                                        sender.send(AgwCommand::SetAudioSymbols(
-                                            AudioSymbol::Up,
-                                            AudioSymbol::Down,
-                                        ))
-                                    }
-                                });
+                if let Some(proxy) = &dbus {
+                    //proxy.get_all(interface_name)
+                    //proxy.get_managed_objects()
+                    tokio::select! {
+                        Some(cmd) = receiver_bt.recv() => {
+                            let _r: Result<(), _> = match cmd {
+                                BtCommand::Next =>  proxy.method_call("org.bluez.MediaPlayer1", "Next", ()).await,
+                                BtCommand::Prev =>  proxy.method_call("org.bluez.MediaPlayer1", "Previous", ()).await
+                            };
+                        },
+                        Ok(meta) = proxy.get::<PropMap>("org.bluez.MediaPlayer1", "Track") => {
+                            if let Some(track) = meta.get_key_value("Title") {
+                                let t = Some(track.1.0.as_str().unwrap().to_string());
+                                if t != track_name {
+                                    track_name = t;
+                                    let name = track_name.clone().unwrap();
+                                    let _ = sender.send(AgwCommand::SetAudioBodyText(IcText {
+                                        format: TextFmtFlags::CENTER,
+                                        text: name.clone(),
+                                    })).and_then(|_| {
+                                        sender.send(AgwCommand::TrackUpdate(name.clone()))
+                                    }).and_then(|_| {
+                                        if name.is_empty() {
+                                            sender.send(AgwCommand::SetAudioSymbols(
+                                                AudioSymbol::None,
+                                                AudioSymbol::None,
+                                            ))
+                                        } else {
+                                            sender.send(AgwCommand::SetAudioSymbols(
+                                                AudioSymbol::Up,
+                                                AudioSymbol::Down,
+                                            ))
+                                        }
+                                    });
+                                } else {
+                                    tokio::time::sleep(Duration::from_millis(500)).await;
+                                }
                             }
                         }
-                        if let Ok(cmd) = receiver_bt.try_recv() {
-                            let _: Result<(), Error> = match cmd {
-                                BtCommand::Next =>  proxy.method_call("org.bluez.MediaPlayer1", "Next", ()),
-                                BtCommand::Prev =>  proxy.method_call("org.bluez.MediaPlayer1", "Previous", ())
-                            };
-                            println!("Bt command {:?}", cmd);
-                        }
                     }
                 }
-                if act {
-                    std::thread::sleep(std::time::Duration::from_millis(250));
-                } else {
-                    std::thread::sleep(std::time::Duration::from_millis(1000));
-                }
+                last_device = device;
             }
         });
 

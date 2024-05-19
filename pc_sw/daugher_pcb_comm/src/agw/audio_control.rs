@@ -1,94 +1,78 @@
-use std::time::Duration;
-use w211_can::{canbus::CanBus, socketcan::{CanSocket, Socket, CanFrame, CanDataFrame, EmbeddedFrame}, socketcan_isotp::{Id, StandardId}};
+use std::sync::Arc;
 
-pub const MAX_VOLUME: f32 = 0.8;
+use w211_can::{canbus::CanBus, tokio_socketcan::{CANFrame, CANSocket}};
+
+pub const MAX_VOLUME: u16 = u16::MAX/2; // &
 
 pub const AUDIO_OUTPUT: &str = "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-surround-51";
-pub const AUDIO_SINK: &str = "upmixing_front";
 
 
 pub struct AudioManager {
-    pub master_volume: f32, // 0 - 1
+    pub master_volume: u16, // 0 - 1
     pub muted: bool,
-    amplifier_can: CanSocket,
+    amplifier_can: Arc<CANSocket>,
 }
 
 impl AudioManager {
 
     pub fn new() -> AudioManager {
 
-        let can =CanBus::E.create_can_socket();
-        let _ = can.set_nonblocking(true);
+        let can = CanBus::E.create_can_socket().unwrap();
 
         let man = Self {
-            master_volume: 0.2,
+            master_volume: MAX_VOLUME/4,
             muted: false,
-            amplifier_can: can,
+            amplifier_can: Arc::new(can),
         };
-        //std::thread::spawn(move|| {
-        std::thread::sleep(Duration::from_secs(5));
-        // Connect all channels in pipewire subsytem
-        AudioManager::connect_channel("output_FR", "playback_RR"); // Right channel connection
-        AudioManager::connect_channel("output_FL", "playback_RL"); // Left channel connection
-        AudioManager::connect_channel("output_FL", "playback_LFE"); // LFE connection
-        AudioManager::connect_channel("output_FR", "playback_LFE"); // LFE connection
-        AudioManager::connect_channel("output_FR", "playback_FC"); // Center connection
-        AudioManager::connect_channel("output_FL", "playback_FC"); // Center connection
-        //});
+        //println!("{:?}", Command::new("/usr/bin/pulseaudio").arg("-k").output());
+        //println!("{:?}", Command::new("/usr/bin/pulseaudio").arg("--start").output());
         man.update_all_channels();
         man
     }
 
-    fn connect_channel(c_in: &str, c_out: &str) {
-        println!("{:?}", std::process::Command::new("/usr/bin/pw-link")
+    fn update_volume(nv: u16) {
+        let _ = std::process::Command::new("/usr/bin/pacmd")
             .args([
-                &format!("{AUDIO_SINK}:{c_in}"),
-                &format!("{AUDIO_OUTPUT}:{c_out}"),
-            ])
-            .output());
-    }
-
-    fn update_volume(nv: f32) {
-        let _ = std::process::Command::new("/usr/bin/wpctl")
-            .args([
-                "set-volume",
-                "@DEFAULT_AUDIO_SINK@",
-                &format!("{nv:.2}"),
-                "'Master'"
+                "set-sink-volume",
+                AUDIO_OUTPUT,
+                &format!("{nv}")
             ])
             .output();
     }
 
-    fn update_all_channels(&self) {
-        let tx_byte: u8 = if self.master_volume > 0.0 {
+    fn write_can(&self) {
+        let tx_byte: u8 = if self.master_volume > 0 {
             0x01
         } else {
             0x00
         };
-        let _ = self.amplifier_can.write_frame(
-            &CanFrame::Data(
-                CanDataFrame::new(
-                    Id::Standard(unsafe { StandardId::new_unchecked(0x001) }),
-                    &[tx_byte]
-                ).unwrap()
-            )
-        );
+        let can = self.amplifier_can.clone();
+        tokio::spawn(async move {
+            let _ = can.write_frame(
+                CANFrame::new(0x001, &[tx_byte], false, false).unwrap()
+            ).unwrap().await;
+        });
+    }
+
+    fn update_all_channels(&self) {
         if self.muted {
-            Self::update_volume(0.0)
+            Self::update_volume(0)
         } else {
             Self::update_volume(self.master_volume)
         }
+        self.write_can();
     }
 
-    pub fn offset_volume(&mut self, o: f32) {
+    pub fn offset_volume(&mut self, o: i16) {
         self.muted = false;
-        if (self.master_volume - o) < 0.0 {
-            self.set_volume(0.0)
-        };
-        self.set_volume(self.master_volume + o);
+        if let Some(new) = self.master_volume.checked_add_signed(o) {
+            self.set_volume(new);
+        } else {
+            self.set_volume(0)
+        }
     }
 
-    pub fn set_volume(&mut self, v: f32) {
+    pub fn set_volume(&mut self, v: u16) {
         self.muted = false;
         if v > MAX_VOLUME {
             self.master_volume = MAX_VOLUME;

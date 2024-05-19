@@ -152,9 +152,9 @@ extern "C" void app_main(void) {
     //configure_pwm_channel(FanPwmConfig, 192);
     twai_message_t read;
     uint64_t last_wake_time = 0;
-    uint8_t blight_pwm = 0;
     xTaskCreate(backlight_demo, "BDEMO", 8192, nullptr, 5, nullptr);
     while(1) {
+        //ESP_LOGI("T", "Running");
         uint64_t now = esp_timer_get_time()/1000;
         //ESP_LOGI("MAIN", "Hazards is %d", can->hazards_pressed);
         gpio_set_level(HZARD_LIGHT_PIN, can->led_on_expire_time >= now);
@@ -170,7 +170,6 @@ extern "C" void app_main(void) {
             // After wakeup
             last_wake_time = esp_timer_get_time()/1000;
         }
-        blight_pwm++;
         vTaskDelay(10/portTICK_PERIOD_MS);
     }
 }

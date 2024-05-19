@@ -1,7 +1,7 @@
 use std::time::Duration;
 
-use socketcan::{CanSocket, Socket, StandardId, CanDataFrame, CanFrame, EmbeddedFrame, Id};
-use socketcan_isotp::{IsoTpSocket, FlowControlOptions, IsoTpOptions, IsoTpBehaviour};
+use tokio_socketcan::{CANFrame, CANSocket};
+use tokio_socketcan_isotp::{FlowControlOptions, Id, IsoTpBehaviour, IsoTpOptions, IsoTpSocket, StandardId};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 pub enum CanBus {
@@ -19,12 +19,12 @@ impl CanBus {
         }
     }
 
-    pub fn create_can_socket(&self) -> CanSocket {
+    pub fn create_can_socket(&self) -> Result<CANSocket, tokio_socketcan::Error> {
         Self::create_can_socket_with_name(self.get_net_name())
     }
 
-    pub fn create_can_socket_with_name(name: &str) -> CanSocket {
-        socketcan::CanSocket::open(name).expect(&format!("Can {name} not found"))
+    pub fn create_can_socket_with_name(name: &str) -> Result<CANSocket, tokio_socketcan::Error> {
+        CANSocket::open(name)
     }
 
     pub fn create_isotp_socket(&self, rx: u16, tx: u16, stmin: u8, bs: u8) -> IsoTpSocket {
@@ -44,10 +44,10 @@ impl CanBus {
             0
         ).unwrap();
         
-        socketcan_isotp::IsoTpSocket::open_with_opts(
+        IsoTpSocket::open_with_opts(
             name, 
-            socketcan_isotp::Id::Standard(unsafe { StandardId::new_unchecked(rx) }), 
-            socketcan_isotp::Id::Standard(unsafe { StandardId::new_unchecked(tx) }), 
+            Id::Standard(StandardId::new(rx).unwrap()), 
+            Id::Standard(StandardId::new(tx).unwrap()), 
             Some(isotp_opts), 
             Some(fc_opts), 
             None
@@ -55,7 +55,7 @@ impl CanBus {
     }
 }
 
-pub fn frame_to_u64(f: &CanFrame) -> (u64, u8) {
+pub fn frame_to_u64(f: &CANFrame) -> (u64, u8) {
     let mut v: u64 = 0;
     for (x, item) in f.data().iter().enumerate() {
         v |= (*item as u64) << (8*(7-x));
@@ -63,16 +63,10 @@ pub fn frame_to_u64(f: &CanFrame) -> (u64, u8) {
     (v, f.data().len() as u8)
 }
 
-pub fn u64_to_frame(id: u16, v: u64, dlc: u8) -> CanFrame {
+pub fn u64_to_frame(id: u16, v: u64, dlc: u8) -> CANFrame {
     let mut data = vec![0; 8];
     for (x, item) in data.iter_mut().enumerate().take(dlc as usize) {
         *item = ((v >> (8*(7-x))) & 0xFF) as u8;
     }
-
-    CanFrame::Data(
-        CanDataFrame::new(
-            Id::Standard(unsafe { StandardId::new_unchecked(id) }), 
-            &data
-        ).unwrap()
-    )
+    CANFrame::new(id as u32, &data[0..dlc as usize], false, false).unwrap()
 }

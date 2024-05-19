@@ -1,6 +1,5 @@
-use std::{time::{Duration, Instant}, collections::VecDeque};
-
-use w211_can::socketcan_isotp::IsoTpSocket;
+use std::time::{Duration, Instant};
+use tokio::{runtime::Runtime, sync::mpsc::{unbounded_channel, UnboundedSender}};
 
 #[repr(u16)]
 pub enum Image {
@@ -357,16 +356,25 @@ impl LayoutBuilder {
 
 }
 
-pub struct Popup {
-    duration: u32,
-    fmt_str: String,
+pub struct CDMIsoTp {
+    sender: UnboundedSender<KombiCustomCommand>,
 }
 
-pub struct CDMIsoTp {
-    handler: IsoTpSocket,
-    display_open: bool,
-    show_time: Instant,
-    popup: Popup
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum ToneType {
+    ShortBeep = 0x01,
+    LongBeep = 0x02,
+    Chime = 0x03
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum ToneRepeatType {
+    None = 0x00,
+    Fast = 0x01,
+    Middle = 0x02,
+    Slow = 0x03
 }
 
 /**
@@ -377,67 +385,130 @@ pub struct CDMIsoTp {
  * which, allows you to display anything on the IC using format strings
  */
 
+ #[derive(Debug, Clone)]
+pub enum KombiCustomCommand {
+    StopBuzzer,
+    Buzzer(ToneType, ToneRepeatType),
+    DisplayText(String, Duration),
+    StopDisplay
+}
+
 impl CDMIsoTp {
-    pub fn new(can: String) -> Self {
-        Self {
-            handler: w211_can::canbus::CanBus::create_isotp_socket_with_name(&can, 0x3E1, 0x1A1, 50, 0),
-            display_open: false,
-            popup: Popup { duration: 0, fmt_str: String::new() },
-            show_time: Instant::now()
-        }
-    }
-
-    pub fn update_buffer(&mut self, s: &str) {
-        if !self.display_open {
-            // [ SPECIAL_CMD COMMAND STR_POS_IDX ]
-            let mut buffer = vec![0x00, 0x00];
-            buffer.extend_from_slice(s.as_bytes());
-            buffer.push(0x00);
-            let _ = self.handler.write(&buffer); // Write to string buffer before show
-            self.popup.fmt_str = s.to_string();
-        } else {
-            self.update_buffer_live(s); // One command
-        }
-    }
-
-    pub fn update_buffer_live(&mut self, s: &str) {
-        //if !self.display_open {
-            // [ SPECIAL_CMD COMMAND STR_POS_IDX ]
-            let mut buffer = vec![0xFE, 0x00];
-            buffer.extend_from_slice(s.as_bytes());
-            buffer.push(0x00);
-            let _ = self.handler.write(&buffer); // Write to string buffer before show
-            self.popup.fmt_str = s.to_string();
-        //}
-    }
-
-    pub fn stop_display(&mut self) {
-        println!("Display stop");
-        // [ COMMAND STR_POS_IDX ]
-        let _ = self.handler.write(&[0x00, 0x00, 0x00]); // Stop processing
-        self.display_open = false;
-    }
-
-    pub fn show_display(&mut self, duration: u32) {
-        self.show_time = Instant::now();
-        self.popup.duration = duration;
-        if !self.display_open {
-            println!("Display show");
-            std::thread::sleep(Duration::from_millis(40));
-            let _ = self.handler.write(&[0xFE]); // Show screen
-            self.display_open = true;
-        }
-    }
-
-    pub fn update(&mut self) {
-        if self.display_open {
-            if self.popup.duration < self.show_time.elapsed().as_millis() as u32 {
-                self.stop_display();
+    pub fn new(rt: &Runtime, can: String) -> Self {
+        let sock = w211_can::canbus::CanBus::create_isotp_socket_with_name(&can, 0x3E1, 0x1A1, 50, 0);
+        
+        let (tx, mut rx) = unbounded_channel::<KombiCustomCommand>();
+        let txd = tx.clone();
+        let h = rt.handle().clone();
+        rt.spawn(async move {
+            let mut display_open = false;
+            let mut cmd_to_ack: Option<KombiCustomCommand> = None;
+            let mut last_cmd_time = Instant::now();
+            let mut timeout_ms = 0;
+            loop {
+                tokio::select! {
+                    Ok(response) = sock.read_packet().unwrap() => {
+                        if response[0] == 0x00 { // ack
+                            if cmd_to_ack.is_none() {
+                                log::warn!("Custom display proto detected random ack?");
+                            }
+                            cmd_to_ack = None;
+                        } else if response[0] == 0x01 {
+                            // Page manually shut
+                            display_open = false;
+                        } else if response[0] == 0x02 {
+                            // TODO - Button events
+                        }
+                    },
+                    Some(command) = rx.recv() => {
+                        let mut req_ack = false;
+                        let response = match command.clone() {
+                            KombiCustomCommand::StopBuzzer => {
+                                req_ack = true;
+                                sock.write_packet(&[0xFE, 0x10, 0x00, 0x00]).unwrap().await
+                            },
+                            KombiCustomCommand::Buzzer(tty, trt) => {
+                                let p = vec![0xFE, 0x10, tty as u8, trt as u8];
+                                req_ack = true;
+                                sock.write_packet(&p).unwrap().await
+                            },
+                            KombiCustomCommand::DisplayText(text, expires_in) => {
+                                if !display_open {
+                                    // Update buffer
+                                    let mut buffer = vec![];
+                                    buffer.extend_from_slice(&[0x00, 0x00]);
+                                    buffer.extend_from_slice(text.as_bytes());
+                                    buffer.push(0x00);
+                                    let _ = sock.write_packet(&buffer).unwrap().await;
+                                    let _ = sock.write_packet(&[0xFE, 0x00]).unwrap().await;
+                                } else {
+                                    // Already open, just update buffer
+                                    let mut buffer = vec![];
+                                    buffer.extend_from_slice(&[0xFE, 0x01, 0x00]);
+                                    buffer.extend_from_slice(text.as_bytes());
+                                    buffer.push(0x00);
+                                    let _ = sock.write_packet(&buffer).unwrap().await;
+                                }
+                                // Then show display
+                                display_open = true;
+                                req_ack = true;
+                                timeout_ms = expires_in.as_millis();
+                                let tx_c = txd.clone();
+                                last_cmd_time = Instant::now();
+                                h.spawn(async move {
+                                    // Triggers cleanup operation
+                                    tokio::time::sleep(expires_in).await;
+                                    let _ = tx_c.clone().send(KombiCustomCommand::StopDisplay);
+                                });
+                                Ok(())
+                            },
+                            KombiCustomCommand::StopDisplay => {
+                                if display_open && last_cmd_time.elapsed().as_millis() >= timeout_ms {
+                                    display_open = false;
+                                    sock.write_packet(&[0x00, 0x00, 0x00]).unwrap().await
+                                } else {
+                                    Ok(())
+                                }
+                            },
+                        };
+                        if response.is_ok() && req_ack { // Only await ack if tx buffer != 0x00
+                            cmd_to_ack = Some(command);
+                        } else {
+                            cmd_to_ack = None;
+                        }
+                    }
+                }
             }
+        });
+        
+        Self {
+            sender: tx,
         }
     }
 
-    pub fn notify_track_change(&mut self, name: &str) {
+    pub fn sound_buzzer(&self, tone: ToneType, repeat: ToneRepeatType) {
+        let _ = self.sender.send(KombiCustomCommand::Buzzer(tone, repeat));
+    }
+
+    pub fn stop_buzzer(&self) {
+        let _ = self.sender.send(KombiCustomCommand::StopBuzzer);
+    }
+
+    pub fn stop_display(&self) {
+        let _ = self.sender.send(KombiCustomCommand::StopDisplay);
+    }
+
+    pub fn show_display(&self, text: String, duration: u32) {
+
+        let d = match duration {
+            u32::MAX => Duration::from_millis(u64::MAX),
+            _ => Duration::from_millis(duration as u64)
+        };
+
+        let _ = self.sender.send(KombiCustomCommand::DisplayText(text, d));
+    }
+
+    pub fn notify_track_change(&self, name: &str) {
         let mut show_test = "".to_string();
         let mut count = 0;
         for c in name.chars() {
@@ -473,7 +544,6 @@ impl CDMIsoTp {
             .finish();
         
         log::info!("Display cmd: '{display_string}'");
-        self.update_buffer(&display_string);
-        self.show_display(2500);
+        let _ = self.sender.send(KombiCustomCommand::DisplayText(display_string, Duration::from_millis(2500)));
     }
 }

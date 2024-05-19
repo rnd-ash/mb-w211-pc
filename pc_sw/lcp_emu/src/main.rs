@@ -1,45 +1,36 @@
-use std::{sync::{atomic::{AtomicBool, Ordering, AtomicU8, AtomicU64, AtomicU32, AtomicU16, AtomicI32}, Arc, Mutex}, time::{Duration, Instant}, borrow::BorrowMut, fmt::Display, process::{Command, self}};
+use std::{sync::{atomic::{AtomicBool, Ordering, AtomicU64, AtomicU32}, Arc}, time::Duration, process::{Command, self}};
 
-use eframe::{NativeOptions, epaint::{Vec2, Color32, FontId, Shape, PathShape, Stroke, Mesh, TextureId, mutex::RwLock, Pos2, Rect}, egui::{Button, CentralPanel, Sense, self, Ui}, emath::{Align2, lerp}};
+use can_monitor::CanMonitor;
+use eframe::{egui::{self, include_image, CentralPanel, ImageSource, Sense, Ui}, emath::Align2, epaint::{Color32, FontId, Pos2, Rect, Vec2}, NativeOptions};
 use egui_extras::{StripBuilder, Size};
-use w211_can::{canbus::{CanBus}, canb, canc::{LRW_236, MS_210, BS_200, BS_200h_BLS}, socketcan::{SocketOptions, Socket}};
+use futures_util::StreamExt;
+use lcp::{Lcp, LcpButton};
+use tokio::runtime::Runtime;
+use tokio_socketcan::CANFilter;
+use w211_can::canbus::CanBus;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+mod can_monitor;
+mod lcp;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ButtonType {
     Static,
     OnOff(bool),
     Level {
+        bar_colour: Color32,
         lit_bars: usize,
         total_bars: usize
-    }
+    },
 }
 
 pub struct LowerControlPanelUI {
-    heater_right: Arc<AtomicBool>,
-    heater_right_status: Arc<AtomicU8>,
-
-    heater_left: Arc<AtomicBool>,
-    heater_left_status: Arc<AtomicU8>,
-
-    chiller_right: Arc<AtomicBool>,
-    chiller_right_status: Arc<AtomicU8>,
-
-    chiller_left: Arc<AtomicBool>,
-    chiller_left_status: Arc<AtomicU8>,
-
-    blind: Arc<AtomicBool>,
-    reboot: Arc<AtomicBool>,
-    headrests: Arc<AtomicBool>,
-    lock: Arc<AtomicBool>,
-    unlock: Arc<AtomicBool>,
-    esp: Arc<AtomicBool>,
     fuel: Arc<AtomicU64>,
     fuel_flow: Arc<AtomicU64>,
-    bps_b: Arc<AtomicU64>,
-    bps_c: Arc<AtomicU64>,
+    monitor: CanMonitor,
+    lcp: Lcp,
     eq_running: Arc<AtomicBool>,
-    bsg_current: Arc<AtomicI32>,
-    volume: Arc<AtomicU32>
+    volume: Arc<AtomicU32>,
+    runtime: Arc<Runtime>
 }
 
 fn make_pair<T>(init: T) -> (Arc<T>, Arc<T>) {
@@ -47,174 +38,65 @@ fn make_pair<T>(init: T) -> (Arc<T>, Arc<T>) {
     (c.clone(), c)
 }
 
-impl LowerControlPanelUI {
-    pub fn new() -> Self {
-        let can = CanBus::B;
-        let can_b = can.create_can_socket();
-        can_b.set_filters(&[(0x210, 0xFFF)]);
+pub const AUDIO_OUTPUT: &str = "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-surround-51";
 
-        let can_b_monitor =  can.create_can_socket();
+impl LowerControlPanelUI {
+    pub fn new(ctx: &egui::Context, runtime: Runtime) -> Self {
+        egui_extras::install_image_loaders(ctx);
+        let runtime_arc = Arc::new(runtime);
 
         let can = CanBus::C;
-        let can_c =  can.create_can_socket();
-        can_c.set_filters(&[(0x608, 0xFFF)]);
-
-        let can_c_monitor = can.create_can_socket();
-
-        let (heater_right, heater_right_c) = make_pair(AtomicBool::new(false));
-        let (reboot, reboot_c) = make_pair(AtomicBool::new(false));
-        let (heater_left, heater_left_c) = make_pair(AtomicBool::new(false));
-        let (chiller_right, chiller_right_c) = make_pair(AtomicBool::new(false));
-        let (chiller_left, chiller_left_c) = make_pair(AtomicBool::new(false));
-        let (blind, blind_c) = make_pair(AtomicBool::new(false));
-        let (headrests, headrests_c) = make_pair(AtomicBool::new(false));
-        let (lock, lock_c) = make_pair(AtomicBool::new(false));
-        let (unlock, unlock_c) = make_pair(AtomicBool::new(false));
-        let (esp, esp_c) = make_pair(AtomicBool::new(false));
-
-        let (heater_right_status, heater_right_status_c) = make_pair(AtomicU8::new(0));
-        let (heater_left_status, heater_left_status_c) = make_pair(AtomicU8::new(0));
-        let (chiller_right_status, chiller_right_status_c) = make_pair(AtomicU8::new(0));
-        let (chiller_left_status, chiller_left_status_c) = make_pair(AtomicU8::new(0));
+        
         let (fuel, fuel_c) = make_pair(AtomicU64::new(0));
         let (fuel_flow, fuel_flow_c) = make_pair(AtomicU64::new(0));
-        let (bps_c, bps_c_c) = make_pair(AtomicU64::new(0));
-        let (bps_b, bps_b_c) = make_pair(AtomicU64::new(0));
-        let (bsg, bsg_c) = make_pair(AtomicI32::new(0));
         let eq_running = Arc::new(AtomicBool::new(false));
-        std::thread::spawn(move|| {
+        
+        runtime_arc.spawn(async move {
+            let mut can_c =  can.create_can_socket().unwrap();
+            let _ = can_c.set_filter(&[CANFilter::new(0x608, 0xFFF).unwrap()]);
             loop {
-                if let Ok(f) = can_c.read_frame() {
-                    if f == 0x608 { // MS608 (10 updates/sec)
-                        let f = ((data[5] as u16) << 8) | data[6] as u16; // Consumption over last 250ms
+                if let Some(Ok(frame)) = can_c.next().await {
+                    if frame.id() == 0x608 {
+                        let f = ((frame.data()[5] as u16) << 8) | frame.data()[6] as u16; // Consumption over last 250ms
                         fuel_flow_c.store(f as u64, Ordering::Relaxed); // ul/sec
                         fuel_c.fetch_add((f as f64 / 50.0) as u64, Ordering::Relaxed);
                     }
                 }
-                std::thread::sleep(Duration::from_millis(20));
             }
         });
-
-        std::thread::spawn(move|| {
-            let mut c = 0;
-            let mut b = 0;
-            let mut measure = Instant::now();
-            loop {
-                if let Some(f) = can_b_monitor.read_frame() {
-                    b += 15 + (8*f.1.len() as u64)
-                }
-                if let Some (f) = can_c_monitor.read_frame() {
-                    c += 15 + (8*f.1.len() as u64)
-                }
-
-                if measure.elapsed().as_millis() >= 1000 {
-                    bps_c_c.store(c, Ordering::Relaxed);
-                    bps_b_c.store(b, Ordering::Relaxed);
-                    c = 0;
-                    b = 0;
-                    measure = Instant::now();
-                }
-                std::thread::sleep(Duration::from_micros(1));
-            }
-        });
-        /*
-        std::thread::spawn(move|| {
-            let mut sock = w211_can::canbus::CanBus::B.create_iso_tp_socket(1842, 1266, 40, 8).unwrap();
-            let cb = CanBus::B.create_can_socket(&[]).unwrap();
-            let _ = sock.set_nonblocking(true);
-            loop {
-                let now = Instant::now();
-                //let _ = cb.send_frame(0x001C, &[0x02, 0x10, 0x92, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC]);
-                let _ = sock.write(&[0x31, 0x02, 0x00 , 0x64]);
-                while now.elapsed().as_millis() < 1000 {
-                    if let Ok(data) = sock.read() {
-                        println!("Data from BSG211! {data:02X?}");
-                        break;
-                    }
-                    std::thread::sleep(Duration::from_millis(100));
-                }
-                let elapsed = now.elapsed().as_millis();
-                if elapsed < 1000 {
-                    std::thread::sleep(Duration::from_millis((1000 - elapsed) as u64));
-                }
-            }
-        });
-        */
 
         let volume = Arc::new(AtomicU32::new(0));
         let volume_c = volume.clone();
 
         std::thread::spawn(move|| {
-            let mut last_tx_time = Instant::now();
-            let mut pc = canb::PC_CTRL_PANEL::new(0);
-            loop {
-                if last_tx_time.elapsed().as_millis() > 100 {
-                    pc.set_DRIVER_COOLER_PRESSED(chiller_right_c.load(Ordering::Relaxed));
-                    pc.set_DRIVER_HEATER_PRESSED(heater_right_c.load(Ordering::Relaxed));
-                    pc.set_ESPOFF(esp_c.load(Ordering::Relaxed));
-                    pc.set_HEADREST(headrests_c.load(Ordering::Relaxed));
-                    pc.set_BLIND(blind_c.load(Ordering::Relaxed));
-                    pc.set_LOCK(lock_c.load(Ordering::Relaxed));
-                    pc.set_PASS_COOLER_PRESSED(chiller_left_c.load(Ordering::Relaxed));
-                    pc.set_PASS_HEATER_PRESSED(heater_left_c.load(Ordering::Relaxed));
-                    pc.set_UNLOCK(unlock_c.load(Ordering::Relaxed));
-                    let f = w211_can::canbus::u64_to_frame(canb::PC_CTRL_PANEL::get_canid(), pc.0, 2);
-                    can_b.send_frame_raw(f);
-                    last_tx_time = Instant::now();
-                }
-                if let Some((id, frame)) = can_b.read_frame() {
-                    let front_left = frame[0];
-                    let front_right = frame[1];
-
-                    heater_left_status_c.store((front_left & 0b11000) >> 3, Ordering::Relaxed);
-                    chiller_left_status_c.store((front_left & 0b11), Ordering::Relaxed);
-
-                    heater_right_status_c.store((front_right & 0b11000) >> 3, Ordering::Relaxed);
-                    chiller_right_status_c.store((front_right & 0b11), Ordering::Relaxed);
-                }
-                if let Ok(output) = process::Command::new("/usr/bin/wpctl")
+            loop { 
+                if let Ok(output) = process::Command::new("/usr/bin/pactl")
                     .args(&[
-                        "get-volume",
-                        "@DEFAULT_AUDIO_SINK@"
+                        "get-sink-volume",
+                        AUDIO_OUTPUT
                     ]).output().map(|x| String::from_utf8(x.stdout).unwrap()) {
-                        let v = output.replace("Volume: ", "").replace("\n", "");
-                        if let Ok(f) = v.parse::<f32>() {
-                            let v = 100.0 * (f/0.8);
-                            volume_c.store(v as u32, Ordering::Relaxed);
+                        let parts: Vec<&str> = output.split(" ").collect();
+                        if let Some(v) = parts.get(2) {
+                            if let Ok(as_int) = v.parse::<u16>() {
+                                let v_max = (u16::MAX/2) as u32;
+                                let v_now = as_int as u32 * 100;
+                                volume_c.store(v_now / v_max, Ordering::Relaxed);
+                            }
                         }
                     }
-                if reboot_c.load(Ordering::Relaxed) {
-                    std::process::Command::new("/usr/bin/sudo").args(["reboot"]).output();
-                }
                 std::thread::sleep(Duration::from_millis(20));
-
             }
         });
 
-        let mut s = Self {
-            heater_right,
-            heater_right_status,
-            heater_left,
-            heater_left_status,
-            chiller_right,
-            chiller_right_status,
-            chiller_left,
-            chiller_left_status,
-            blind,
-            reboot,
-            headrests,
-            lock,
-            unlock,
-            esp,
+        Self {
             fuel,
             fuel_flow,
-            bps_b,
-            bps_c,
+            monitor: CanMonitor::new("vcan_b", "vcan_c", runtime_arc.clone()),
+            lcp: Lcp::new(runtime_arc.clone(), "vcan_b"),
             eq_running,
-            bsg_current: bsg,
-            volume
-        };
-        s
+            volume,
+            runtime: runtime_arc,
+        }
     }
 }
 
@@ -224,20 +106,118 @@ fn faded_color(color: Color32) -> Color32 {
     egui::lerp(Rgba::from(color)..=Rgba::from(Color32::WHITE), 0.8).into()
 }
 
-fn big_button(text: &str, ui: &mut Ui, bg_color: Color32,store: &Arc<AtomicBool>, disp: ButtonType) {
+fn big_button(text: &str, ui: &mut Ui, bg_color: Color32, msg: LcpButton, lcp: &mut Lcp) {
     let size = if text.len() <= 3 {
         100.0
     } else {
         30.0
     };
-    big_button_with_txt_size(size, text, ui, bg_color, store, disp);
+    big_button_with_txt_size(size, text, ui, bg_color, msg, lcp);
 }
 
-fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color32,store: &Arc<AtomicBool>, disp: ButtonType) -> bool {
+fn big_image_button(size: f32, icon: ImageSource<'_>, ui: &mut Ui, button_id: LcpButton, lcp: &mut Lcp, mirrored: bool) -> bool {
     let dimens = ui.available_rect_before_wrap();
     let response = ui.allocate_rect(dimens, Sense::click_and_drag());
-    store.store(response.is_pointer_button_down_on(), Ordering::Relaxed);
+    if response.is_pointer_button_down_on() {
+        lcp.on_press(button_id);
+    } else {
+        lcp.on_release(button_id);
+    }
     let mut ret = false;
+    let (c, text_c) = match response.is_pointer_button_down_on()  {
+        true => {
+            (faded_color(Color32::DARK_GRAY), Color32::DARK_GRAY)
+        },
+        false => {
+            (Color32::DARK_GRAY, Color32::WHITE)
+        }
+    };
+
+    ui.painter().rect_filled(
+        dimens,
+        10.0,
+        c,
+    );
+    let disp = lcp.get_state(button_id);
+    if let ButtonType::OnOff(on) = disp {
+        let bar_y = dimens.center().y + 30.0;
+        let bar_dimens = Rect::from_two_pos(
+            Pos2::new(dimens.left()+20.0, bar_y),
+            Pos2::new(dimens.right()-20.0, bar_y+10.0)
+        );
+        ui.painter().rect_filled(
+            bar_dimens,
+            5.0,
+            if on { Color32::GREEN } else { Color32::BLACK },
+        );
+    } else if let ButtonType::Level { bar_colour, lit_bars, total_bars } = disp {
+        // Width of each bar
+        let bar_w = dimens.width()/4.0;
+        let padding = dimens.height()/10.0;
+
+        // Start Y coord to draw from
+        let bar_area_y_top = dimens.top() + padding;
+        let bar_area_y_bottom = dimens.bottom() - padding;
+        let bar_area_x_left = if mirrored {
+            dimens.left() + padding
+        } else {
+            dimens.right() - padding - bar_w
+        };
+        let bar_area_x_right = if mirrored {
+            dimens.left() + padding + bar_w
+        } else {
+            dimens.right() - padding
+        };
+
+        let bar_area = Rect::from_two_pos(Pos2::new(bar_area_x_left, bar_area_y_top), Pos2::new(bar_area_x_right, bar_area_y_bottom));
+
+        let space_per_bar = bar_area.height()/((total_bars+(total_bars-1)) as f32);
+        // [BAR, SPACE, BAR, SPACE, BAR]
+        let mut draw_order = Vec::new();
+        for _ in 0..total_bars {
+            draw_order.push(true);
+            draw_order.push(false);
+        }
+        draw_order.remove(draw_order.len()-1);
+        let mut bar_id = 0;
+        let mut start_y = bar_area.bottom();
+        for entry in draw_order {
+            if entry {
+                let bar_col = if lit_bars >= (bar_id+1) {
+                    bar_colour
+                } else {
+                    Color32::BLACK
+                };
+
+                // Drawable bar
+                let rect = Rect::from_two_pos(Pos2::new(bar_area_x_left, start_y), Pos2::new(bar_area_x_right, start_y-space_per_bar));
+                let rounding = rect.height()/2.0;
+                ui.painter().rect_filled(
+                    rect,
+                    rounding,
+                    bar_col,
+                );
+                bar_id += 1;
+            } // else -> Space
+            start_y -= space_per_bar;
+        }
+    }
+    let c = dimens.center();
+    let icon_space = Vec2::new(dimens.height()*0.75, dimens.height()*0.75);
+    let draw_area = Rect::from_center_size(c,icon_space);
+    egui::Image::new(icon)
+        .paint_at(ui, draw_area);
+    ret
+}
+
+fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color32, button_id: LcpButton, lcp: &mut Lcp) {
+    let dimens = ui.available_rect_before_wrap();
+    let response = ui.allocate_rect(dimens, Sense::click_and_drag());
+    if response.is_pointer_button_down_on() {
+        lcp.on_press(button_id);
+    } else {
+        lcp.on_release(button_id);
+    }
     let (c, text_c) = match response.is_pointer_button_down_on()  {
         true => {
             (faded_color(bg_color), Color32::DARK_GRAY)
@@ -254,7 +234,7 @@ fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color3
     );
     let font = FontId::monospace(size);
     ui.painter().text(dimens.center(), Align2::CENTER_CENTER, text, font, text_c);
-
+    let disp = lcp.get_state(button_id);
     if let ButtonType::OnOff(on) = disp {
         let bar_y = dimens.center().y + 30.0;
         let bar_dimens = Rect::from_two_pos(
@@ -266,12 +246,8 @@ fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color3
             5.0,
             if on { Color32::GREEN } else { Color32::BLACK },
         );
-    } else if let ButtonType::Level { lit_bars, total_bars } = disp {
+    } else if let ButtonType::Level { bar_colour, lit_bars, total_bars } = disp {
         let bar_y = dimens.center().y + 30.0;
-        let mut c = Color32::GREEN;
-        if lit_bars > total_bars {
-            c = Color32::WHITE
-        }
 
         let l = dimens.left() + 20.0;
         let r = dimens.right() - 20.0;
@@ -281,8 +257,8 @@ fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color3
 
         let mut s = l;
         for i in 1..=total_bars {
-            c = if i <= lit_bars {
-                Color32::GREEN
+            let c = if i <= lit_bars {
+                bar_colour
             } else {
                 Color32::BLACK
             };
@@ -299,8 +275,6 @@ fn big_button_with_txt_size(size: f32, text: &str, ui: &mut Ui, bg_color: Color3
             );
         }
     }
-    ret
-
 }
 
 fn press_key(key: &str) {
@@ -331,24 +305,8 @@ fn hold_key(key: &str, pressed: bool) {
         .output();
 }
 
-fn read_recent_frame_as_u64(can: &CanWrapper) -> Option<(u16, (u64, u8))> {
-    let mut f = None;
-    while let Some(s) = can.read_frame_as_u64() {
-        f = Some(s);
-    }
-    f
-}
-
-fn read_recent_frame_bytes(can: &CanWrapper) -> Option<(u16, Vec<u8>)> {
-    let mut f = None;
-    while let Some(s) = can.read_frame() {
-        f = Some(s);
-    }
-    f
-}
-
 impl eframe::App for LowerControlPanelUI {
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
                 .size(Size::relative(0.185)) // Passenger seats
@@ -363,27 +321,30 @@ impl eframe::App for LowerControlPanelUI {
                     strip.strip(|builder| {
                         builder.sizes(Size::remainder(), 2).vertical(|mut col| {
                             col.cell(|ui| {
-                                big_button("SEAT HEATER", ui, Color32::RED, &self.heater_left, ButtonType::Level { lit_bars: self.heater_left_status.load(Ordering::Relaxed) as usize, total_bars: 3 })
+                                big_image_button(100.0, include_image!("../resources/seat_heater_l.png"), ui, LcpButton::HeaterL, &mut self.lcp, false);
+                                //big_button("SEAT HEATER", ui, Color32::RED, LcpButton::HeaterL, &mut self.lcp)
                             });
                             col.cell(|ui| {
-                                big_button("SEAT COOLER", ui, Color32::BLUE,&self.chiller_left, ButtonType::Level { lit_bars: self.chiller_left_status.load(Ordering::Relaxed) as usize, total_bars: 3 })
-                            });
-                        });
-                    });
-                    strip.strip(|builder| {
-                        builder.sizes(Size::remainder(), 2).vertical(|mut col| {
-                            col.cell(|ui| {
-                                big_button("BLIND", ui, Color32::DARK_GRAY, &self.blind, ButtonType::Static)
-                            });
-                            col.cell(|ui| {
-                                big_button("REBOOT", ui, Color32::RED, &self.reboot, ButtonType::Static)
+                                big_image_button(100.0, include_image!("../resources/seat_cooler_l.png"), ui, LcpButton::ChillerL, &mut self.lcp, false);
                             });
                         });
                     });
                     strip.strip(|builder| {
                         builder.sizes(Size::remainder(), 2).vertical(|mut col| {
                             col.cell(|ui| {
-                                big_button("HEADREST", ui, Color32::DARK_GREEN,&self.headrests, ButtonType::Static)
+                                big_image_button(100.0, include_image!("../resources/blind.png"), ui, LcpButton::Blind, &mut self.lcp, false);
+                                //big_button("BLIND", ui, Color32::DARK_GRAY, LcpButton::Blind, &mut self.lcp)
+                            });
+                            col.cell(|ui| {
+                                big_button("REBOOT", ui, Color32::RED, LcpButton::Reboot, &mut self.lcp)
+                            });
+                        });
+                    });
+                    strip.strip(|builder| {
+                        builder.sizes(Size::remainder(), 2).vertical(|mut col| {
+                            col.cell(|ui| {
+                                big_image_button(100.0, include_image!("../resources/headrests.png"), ui, LcpButton::Headrest, &mut self.lcp, false);
+                                //big_button("HEADREST", ui, Color32::DARK_GREEN,LcpButton::Headrest, &mut self.lcp)
                             });
                             col.strip(|s| {
                                 s.sizes(Size::remainder(), 2).vertical(|mut c| {
@@ -394,7 +355,8 @@ impl eframe::App for LowerControlPanelUI {
                                     });
                                     c.cell(|ui| {
                                         let sto = Arc::new(AtomicBool::new(false));
-                                        if big_button_with_txt_size(40.0,"GAME", ui, Color32::GOLD,&sto, ButtonType::Static) {
+                                        /*
+                                        if big_button_with_txt_size(40.0,"GAME", ui, Color32::GOLD,LcpButton::Game, &mut self.lcp) {
                                             if !self.eq_running.load(Ordering::Relaxed) {
                                                 self.eq_running.store(true, Ordering::Relaxed);
                                                 let c = self.eq_running.clone();
@@ -564,7 +526,7 @@ impl eframe::App for LowerControlPanelUI {
                                                 });
                                             }
                                             println!("Cliked!")
-                                        }
+                                        }*/
                                     });
                                 });
                             });
@@ -590,17 +552,19 @@ impl eframe::App for LowerControlPanelUI {
                     strip.strip(|builder| {
                         builder.sizes(Size::remainder(), 2).vertical(|mut col| {
                             col.cell(|ui| {
-                                big_button("LOCK", ui, Color32::DARK_GRAY,&self.lock, ButtonType::Static)
+                                //big_button("LOCK", ui, Color32::DARK_GRAY,LcpButton::Lock, &mut self.lcp)
+                                big_image_button(100.0, include_image!("../resources/lock.png"), ui, LcpButton::Lock, &mut self.lcp, false);
                             });
                             col.cell(|ui| {
-                                big_button("UNLOCK", ui, Color32::DARK_GRAY, &self.unlock, ButtonType::Static)
+                                //big_button("UNLOCK", ui, Color32::DARK_GRAY, LcpButton::Unlock, &mut self.lcp)
+                                big_image_button(100.0, include_image!("../resources/unlock.png"), ui, LcpButton::Unlock, &mut self.lcp, false);
                             });
                         });
                     });
                     strip.strip(|builder| {
                         builder.sizes(Size::remainder(), 2).vertical(|mut col| {
                             col.cell(|ui| {
-                                big_button("⚠", ui, Color32::GOLD,&self.esp, ButtonType::Static)
+                                big_image_button(100.0, include_image!("../resources/esp_off.png"), ui, LcpButton::Esp, &mut self.lcp, false);
                             });
                             col.cell(|ui| {
                                 // Net speeds
@@ -608,8 +572,8 @@ impl eframe::App for LowerControlPanelUI {
                                 let center = dimens.center();
                                 let top = Pos2::new(center.x, center.y-20.0);
                                 let bottom = Pos2::new(center.x, center.y+20.0);
-                                ui.painter().text(top, Align2::CENTER_CENTER, format!("C_B: {:.2}kbps", self.bps_b.load(Ordering::Relaxed) as f32 / 1000.0), FontId::monospace(20.0), Color32::WHITE);
-                                ui.painter().text(bottom, Align2::CENTER_CENTER, format!("C_C: {:.2}kbps", self.bps_c.load(Ordering::Relaxed) as f32 / 1000.0), FontId::monospace(20.0), Color32::WHITE);
+                                ui.painter().text(top, Align2::CENTER_CENTER, format!("C_B: {:.2}kbps", self.monitor.data_rate_b() as f32 / 1000.0), FontId::monospace(20.0), Color32::WHITE);
+                                ui.painter().text(bottom, Align2::CENTER_CENTER, format!("C_C: {:.2}kbps", self.monitor.data_rate_c() as f32 / 1000.0), FontId::monospace(20.0), Color32::WHITE);
                             });
                         });
                     });
@@ -617,10 +581,10 @@ impl eframe::App for LowerControlPanelUI {
                     strip.strip(|builder| {
                         builder.sizes(Size::remainder(), 2).vertical(|mut col| {
                             col.cell(|ui| {
-                                big_button("SEAT HEATER", ui, Color32::RED,&self.heater_right, ButtonType::Level { lit_bars: self.heater_right_status.load(Ordering::Relaxed) as usize, total_bars: 3 })
+                                big_image_button(100.0, include_image!("../resources/seat_heater_r.png"), ui, LcpButton::HeaterR, &mut self.lcp, true);
                             });
                             col.cell(|ui| {
-                                big_button("SEAT COOLER", ui, Color32::BLUE,&self.chiller_right, ButtonType::Level { lit_bars: self.chiller_right_status.load(Ordering::Relaxed) as usize, total_bars: 3 })
+                                big_image_button(100.0, include_image!("../resources/seat_cooler_r.png"), ui, LcpButton::ChillerR, &mut self.lcp, true);
                             });
                         });
                     });
@@ -631,18 +595,27 @@ impl eframe::App for LowerControlPanelUI {
     }
 }
 
-
 fn main() {
-    let mut app = LowerControlPanelUI::new();
     let mut native_options = NativeOptions::default();
     // 2048x1536
-    native_options.initial_window_size = Some(Vec2::new(2048.0, 300.0));
-    native_options.max_window_size = Some(Vec2::new(2048.0, 300.0));
-    native_options.decorated = false;
     native_options.vsync = true;
-    eframe::run_native(
+
+    let mut builder = native_options.viewport;
+    builder = builder.with_decorations(false);
+    builder = builder.with_max_inner_size(Vec2::new(2048.0, 300.0));
+    builder = builder.with_inner_size(Vec2::new(2048.0, 300.0));
+    native_options.viewport = builder;
+
+    let _ = eframe::run_native(
         "Lower control panel emulator",
         native_options,
-        Box::new(|cc| Box::new(app)),
+        Box::new(|cc| {
+            let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build().unwrap();
+
+            let app = LowerControlPanelUI::new(&cc.egui_ctx, rt);
+            Box::new(app)
+        }),
     );
 }
