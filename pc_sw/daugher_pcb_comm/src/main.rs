@@ -2,9 +2,11 @@
 pub mod agw;
 use agw::audio::AudioCfgSettings;
 use custom_display_format::CDMIsoTp;
+use destruction_monitor::DestructionMonitor;
 use futures_util::StreamExt;
 use w211_can::{canb::EZS_A1, canbus::{frame_to_u64, CanBus}, tokio_socketcan::CANFilter};
 pub mod custom_display_format;
+pub mod destruction_monitor;
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +18,8 @@ async fn main() {
     let audio_page_settings = AudioCfgSettings {
         auto_scroll: true,
     };
-    let agw: agw::AgwEmulator = agw::AgwEmulator::new(&rt, can_name, vlad, audio_page_settings);
+    let agw: agw::AgwEmulator = agw::AgwEmulator::new(&rt, can_name, vlad.clone(), audio_page_settings);
+    //let dm = DestructionMonitor::new(vlad, &rt);
     let _next_down = false;
     let _prev_down = false;
 

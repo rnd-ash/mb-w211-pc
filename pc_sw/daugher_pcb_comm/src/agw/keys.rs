@@ -5,7 +5,7 @@ use std::sync::{
 
 
 use futures_util::StreamExt;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use w211_can::{canb::{KOMBI_A5, MRM_A2}, canbus::CanBus, tokio_socketcan::CANFilter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -51,6 +51,7 @@ pub enum W213WheelKey {
     Answer,
     Decline,
     Mute,
+    UnMute, // For AGW only
     Speak,
     Star,
     ICHome,
@@ -108,7 +109,7 @@ pub enum KombiPage {
 #[derive(Debug)]
 pub struct WheelKeyManager {
     page: Arc<AtomicU8>,
-    key_press: UnboundedReceiver<W213WheelKey>
+    key_press: UnboundedReceiver<W213WheelKey>,
 }
 
 pub fn move_mouse(pos: u8, is_x: bool) {
@@ -139,10 +140,11 @@ pub fn click_mouse() {
 }
 
 impl WheelKeyManager {
-    pub fn new(can_name: String) -> Self {
+    pub fn new(can_name: String) -> (Self, UnboundedSender<W213WheelKey>) {
         let page_ref = Arc::new(AtomicU8::new(0));
         let page_ref_c = page_ref.clone();
         let (tx, rx) = unbounded_channel::<W213WheelKey>();
+        let tx_c = tx.clone();
         tokio::spawn(async move {
             let mut can = CanBus::create_can_socket_with_name(&can_name).unwrap();
             let filters = [
@@ -204,10 +206,10 @@ impl WheelKeyManager {
             }
         });
         
-        Self { 
+        (Self { 
             page: page_ref,
-            key_press: rx
-        }
+            key_press: rx,
+        }, tx_c)
     }
 
     pub fn current_page(&self) -> KombiPage {
@@ -222,5 +224,4 @@ impl WheelKeyManager {
     pub async fn event(&mut self) -> Option<W213WheelKey> {
         self.key_press.recv().await
     }
-
 }

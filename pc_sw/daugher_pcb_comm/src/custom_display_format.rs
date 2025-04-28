@@ -14,174 +14,184 @@ pub enum Image {
     EspText = 0x07,
     AbsText = 0x08,
     BasText = 0x09,
-    CoolantTemp = 0x0A,
-    WasherFluid = 0x0B,
-    CoolantLevel = 0x0C,
-    BulbWarning = 0x0D,
-    SeatbeltWarning = 0x0E,
-    BatteryBig = 0x0F,
-    CheckEngine = 0x10,
-    P = 0x11,
-    Electric = 0x12,
-    Key = 0x13,
-    Oil = 0x14,
-    EpcText = 0x15,
-    TrailerHook = 0x16,
-    Taxi = 0x17,
-    TeleaidCallSOS = 0x18,
-    SosText = 0x19,
-    TyrePressureWarn = 0x1A,
+    StationaryHeater = 0x0A,
+    CoolantTemp = 0x0B,
+    WasherFluid = 0x0C,
+    CoolantLevel = 0x0D,
+    BulbWarning = 0x0E,
+    SeatbeltWarning = 0x0F,
+    BatteryBig = 0x10,
+    CheckEngine = 0x11,
+    P = 0x12,
+    Electric = 0x13,
+    Key = 0x14,
+    Oil = 0x15,
+    EpcText = 0x16,
+    TrailerHook = 0x17,
+    Taxi = 0x18,
+    TeleaidCallSOS = 0x19,
+    SosText = 0x1A,
+    TyrePressureWarn = 0x1B,
     // Teleaid
-    TeleaidCallInfo = 0x1B,
-    TeleaidCallService = 0x1C,
-    TeleaidCallFCD = 0x1D,
+    TeleaidCallInfo = 0x1C,
+    TeleaidCallService = 0x1D,
+    TeleaidCallFCD = 0x1E,
     // Service
-    Spanner = 0x1E,
-    DoubleSpanner = 0x1F,
+    Spanner = 0x1F,
+    DoubleSpanner = 0x20,
     // ??
-    CarTopDownLRSaloon = 0x20,
-    CarTopDownLRWagon = 0x21,
-    EndCall = 0x22,
-    AirmaticSaloon = 0x23,
-    AirmaticWagon = 0x24,
-    AdaptiveDamper = 0x25,
-    SeatTilt = 0x26,
-    Seat = 0x27,
-    Stop = 0x28,
-    TrunkOpenWagon = 0x29,
-    //2A ??
-    Disc = 0x2B,
-    SbcS = 0x2C,
-    SbcH = 0x2D,
-    Plus = 0x2E,
-    FuelFilter = 0x2F,
-    FuelFilterTank = 0x30,
-    SunroofSlideClose = 0x31,
-    SunroofDownClose = 0x32,
-    AirFilter = 0x33,
-    Hold = 0x34,
-    RefillWithSaloon = 0x35,
-    RefillWithWagon = 0x36,
-    Prohibited = 0x37,
-    BatterySmall = 0x38,
-    OilTemperatureSmall = 0x39,
-    // 0x3A - 0x4B - Door icons
-    WagonSideView = 0x4C,
-    SaloonSideView = 0x51,
+    CarTopDownLRSaloon = 0x21,
+    CarTopDownLRWagon = 0x22,
+    EndCall = 0x23,
+    AirmaticSaloon = 0x24,
+    AirmaticWagon = 0x25,
+    AdaptiveDamper = 0x26,
+    SeatTilt = 0x27,
+    Seat = 0x28,
+    Stop = 0x29,
+    TrunkOpenWagon = 0x2A,
+    WindShieldHeating = 0x2B,
+    Disc = 0x2C,
+    SbcS = 0x2D,
+    SbcH = 0x2E,
+    Plus = 0x2F,
+    FuelFilter = 0x30,
+    FuelFilterTank = 0x31,
+    SunroofSlideClose = 0x32,
+    SunroofDownClose = 0x33,
+    AirFilter = 0x34,
+    Hold = 0x35,
+    RefillWithSaloon = 0x36,
+    RefillWithWagon = 0x37,
+    Prohibited = 0x38,
+    BatterySmall = 0x39,
+    OilTemperatureSmall = 0x3A,
+    // 0x3B - 0x4C - Door icons
+    WagonSideView = 0x4D,
+    WagonSideViewTrunk = 0x4E,
+    // 4F - ??
+    WagonSideViewBonnet = 0x50,
+    // 51 - 2 dots
+    SaloonSideView = 0x52,
+    SaloonSideViewTrunk = 0x53,
+    // 54 - ??
+    SaloonSideViewBonnet = 0x55,
+    // 56 - 2 dots
     // DTR images
-    DtrDistantCar = 0x56,
-    DtrSideCarView = 0x57,
-    Dtr100mBar = 0x58,
-    Dtr100ydBar = 0x59,
-    Dtr300ftBar = 0x5A,
-    DtrSoundOn = 0x5B,
-    DtrBarEmpty = 0x5C,
+    DtrDistantCar = 0x57,
+    DtrSideCarView = 0x58,
+    Dtr100mBar = 0x59,
+    Dtr100ydBar = 0x5A,
+    Dtr300ftBar = 0x5B,
+    DtrSoundOn = 0x5C,
+    DtrBarEmpty = 0x5D,
     // Begin settings images
-    MinusInCircle = 0x5D,
-    PlusInCircle = 0x5E,
-    LaneFrontView = 0x5F,
-    Thermometer = 0x60,
-    Clock = 0x61,
-    Lim = 0x62,
-    TopDownLamp = 0x63,
-    FrontLamp = 0x64,
-    SideLights = 0x65,
-    TaxiLarge = 0x66,
-    SeatLarge = 0x67,
+    MinusInCircle = 0x5E,
+    PlusInCircle = 0x5F,
+    LaneFrontView = 0x60,
+    Thermometer = 0x61,
+    Clock = 0x62,
+    Lim = 0x63,
+    TopDownLamp = 0x64,
+    FrontLamp = 0x65,
+    SideLights = 0x66,
+    TaxiLarge = 0x67,
+    SeatLarge = 0x68,
     // Images for status line maybe
-    TinyCar = 0x68,
-    TinyLim = 0x69,
-    TinyDtr = 0x6A,
-    TinyTmp = 0x6B,
-    TinyKmh = 0x6C,
-    TinyMph = 0x6D,
-    SmallSbcS = 0x6E,
-    SmallSbcH = 0x6F,
-    SmallHold = 0x70,
+    TinyCar = 0x69,
+    TinyLim = 0x6A,
+    TinyDtr = 0x6B,
+    TinyTmp = 0x6C,
+    TinyKmh = 0x6D,
+    TinyMph = 0x6E,
+    SmallSbcS = 0x6F,
+    SmallSbcH = 0x70,
+    SmallHold = 0x71,
 
-    PrevPage = 0x71, /// Why is this here?
-    BoxT = 0x72,
-    RadioMast = 0x73,
-    SmallGas100Percent = 0x74,
-    SmallGas0Percent = 0x75,
-    SmallGas25Percent = 0x76,
-    RearWiper = 0x77,
-    NextTrack = 0x78,
-    PrevTrack = 0x79,
-    SeekFwd = 0x7A,
-    SeekRev = 0x7B,
-    Play = 0x7C,
-    PlayRev = 0x7D,
-    UpArrow = 0x7E,
-    DownArrow = 0x7F,
-    Ringing = 0x80,
-    PhoneBook = 0x81,
-    Sms = 0x82,
-    VolOn = 0x83,
-    VolMute = 0x84,
+    PrevPage = 0x72, /// Why is this here?
+    BoxT = 0x73,
+    RadioMast = 0x74,
+    SmallGas100Percent = 0x75,
+    SmallGas0Percent = 0x76,
+    SmallGas25Percent = 0x77,
+    RearWiper = 0x78,
+    NextTrack = 0x79,
+    PrevTrack = 0x7A,
+    SeekFwd = 0x7B,
+    SeekRev = 0x7C,
+    Play = 0x7D,
+    PlayRev = 0x7E,
+    UpArrow = 0x7F,
+    DownArrow = 0x80,
+    Ringing = 0x81,
+    PhoneBook = 0x82,
+    Sms = 0x83,
+    VolOn = 0x84,
+    VolMute = 0x85,
 
-    DataRx = 0x85,
-    DataTx = 0x86,
-    Satalite = 0x87,
-    Prohibited2 = 0x88,
-    Bell = 0x89,
-    Clock2 = 0x8A,
-    NextTrackSmall = 0x8B,
-    Microphone = 0x8C,
-    CircleEmpty = 0x8D,
-    CircleFull = 0x8E,
-    BoxTBold = 0x8F,
+    DataRx = 0x86,
+    DataTx = 0x87,
+    Satalite = 0x88,
+    Prohibited2 = 0x89,
+    Bell = 0x8A,
+    Clock2 = 0x8B,
+    NextTrackSmall = 0x8C,
+    Microphone = 0x8D,
+    CircleEmpty = 0x8E,
+    CircleFull = 0x8F,
+    BoxTBold = 0x90,
 
-    LaneTopDownArrow12 = 0x90,
-    LaneTopDownArrow10 = 0x91,
-    LaneTopDownArrow9 = 0x92,
-    LaneTopDownArrow7 = 0x93,
-    LaneTopDownArrow6 = 0x94,
-    LaneTopDownArrow6_2 = 0x95,
-    LaneTopDownArrow5 = 0x96,
-    LaneTopDownArrow3 = 0x97,
-    LaneTopDownArrow1 = 0x98,
-    LaneTopDownNoArrow = 0x99,
+    LaneTopDownArrow12 = 0x91,
+    LaneTopDownArrow10 = 0x92,
+    LaneTopDownArrow9 = 0x93,
+    LaneTopDownArrow7 = 0x94,
+    LaneTopDownArrow6 = 0x95,
+    LaneTopDownArrow6_2 = 0x96,
+    LaneTopDownArrow5 = 0x97,
+    LaneTopDownArrow3 = 0x98,
+    LaneTopDownArrow1 = 0x99,
+    LaneTopDownNoArrow = 0x9A,
 
-    UpArrow2 = 0x9A,
-    DownArrow2 = 0x9B,
+    UpArrow2 = 0x9B,
+    DownArrow2 = 0x9C,
 
-    PrevPage2 = 0x9C,
+    PrevPage2 = 0x9D,
+    NextPage2 = 0x9E,
 
-    Decline = 0x9E,
-    SmallPlus = 0x9F,
-    SmallMinus = 0xA0,
+    Decline = 0x9F,
+    SmallPlus = 0xA0,
+    SmallMinus = 0xA1,
 
-    Selector0To5Level0 = 0xA1,
-    Selector0To5Level1 = 0xA2,
-    Selector0To5Level2 = 0xA3,
-    Selector0To5Level3 = 0xA4,
-    Selector0To5Level4 = 0xA5,
-    Selector0To5Level5 = 0xA6,
+    Selector0To5Level0 = 0xA2,
+    Selector0To5Level1 = 0xA3,
+    Selector0To5Level2 = 0xA4,
+    Selector0To5Level3 = 0xA5,
+    Selector0To5Level4 = 0xA6,
+    Selector0To5Level5 = 0xA7,
 
-    CurvematicIpsReserve = 0xA7, 
-    CurvematicWarningLeftTurn = 0xA8,
-    CurvematicWarningRightTurn = 0xA9,
-    CurvematicWarningBendyRoadLeft = 0xAA,
-    CurvematicWarningBendyRoadRight = 0xAB,
-    CurvematicWarningRoundaboutLeft = 0xAC,
-    CurvematicWarningRoundaboutRight = 0xAD,
-    CurvematicWarningTJunction = 0xAE,
-    CurvematicWarningFrost = 0xAF,
-    CurvematicInfoLeftTurn = 0xB0,
-    CurvematicInfoRightTurn = 0xB1,
-    CurvematicInfoBendyRoadLeft = 0xB2,
-    CurvematicInfoBendyRoadRight = 0xB3,
-    CurvematicInfoRoundaboutLeft = 0xB4,
-    CurvematicInfoRoundaboutRight = 0xB5,
-    CurvematicInfoTJunction = 0xB6,
-    CurvematicInfoFrost = 0xB7,
+    CurvematicIpsReserve = 0xA8, 
+    CurvematicWarningLeftTurn = 0xA9,
+    CurvematicWarningRightTurn = 0xAA,
+    CurvematicWarningBendyRoadLeft = 0xAB,
+    CurvematicWarningBendyRoadRight = 0xAC,
+    CurvematicWarningRoundaboutLeft = 0xAD,
+    CurvematicWarningRoundaboutRight = 0xAE,
+    CurvematicWarningTJunction = 0xAF,
+    CurvematicWarningFrost = 0xB0,
+    CurvematicInfoLeftTurn = 0xB1,
+    CurvematicInfoRightTurn = 0xB2,
+    CurvematicInfoBendyRoadLeft = 0xB3,
+    CurvematicInfoBendyRoadRight = 0xB4,
+    CurvematicInfoRoundaboutLeft = 0xB5,
+    CurvematicInfoRoundaboutRight = 0xB6,
+    CurvematicInfoTJunction = 0xB7,
+    CurvematicInfoFrost = 0xB8,
 
-    GasEmpty = 0xB8,
-    GasBarDashes = 0xB9,
-    GasBarFullOverlay = 0xBA,
-    GasBarEmptyOverlay = 0xBB,
-    GasBarLevelMarkers = 0xBC,
+    GasEmpty = 0xB9,
+    GasBarDashes = 0xBA,
+    GasBarFullOverlay = 0xBB,
+    GasBarEmptyOverlay = 0xBC,
+    GasBarLevelMarkers = 0xBD,
 }
 
 
@@ -356,6 +366,7 @@ impl LayoutBuilder {
 
 }
 
+#[derive(Clone)]
 pub struct CDMIsoTp {
     sender: UnboundedSender<KombiCustomCommand>,
 }
@@ -390,7 +401,8 @@ pub enum KombiCustomCommand {
     StopBuzzer,
     Buzzer(ToneType, ToneRepeatType),
     DisplayText(String, Duration),
-    StopDisplay
+    StopDisplay,
+    StopDisplayExtern
 }
 
 impl CDMIsoTp {
@@ -406,6 +418,10 @@ impl CDMIsoTp {
             let mut last_cmd_time = Instant::now();
             let mut timeout_ms = 0;
             loop {
+                if let Some(cmd) = &cmd_to_ack {
+                    // Wait for ack
+                }
+
                 tokio::select! {
                     Ok(response) = sock.read_packet().unwrap() => {
                         if response[0] == 0x00 { // ack
@@ -421,6 +437,7 @@ impl CDMIsoTp {
                         }
                     },
                     Some(command) = rx.recv() => {
+                        log::debug!("Runnning {command:?}");
                         let mut req_ack = false;
                         let response = match command.clone() {
                             KombiCustomCommand::StopBuzzer => {
@@ -455,11 +472,13 @@ impl CDMIsoTp {
                                 timeout_ms = expires_in.as_millis();
                                 let tx_c = txd.clone();
                                 last_cmd_time = Instant::now();
-                                h.spawn(async move {
-                                    // Triggers cleanup operation
-                                    tokio::time::sleep(expires_in).await;
-                                    let _ = tx_c.clone().send(KombiCustomCommand::StopDisplay);
-                                });
+                                if expires_in.as_millis() as u64 != u64::MAX {
+                                    h.spawn(async move {
+                                        // Triggers cleanup operation
+                                        tokio::time::sleep(expires_in).await;
+                                        let _ = tx_c.clone().send(KombiCustomCommand::StopDisplay);
+                                    });
+                                }
                                 Ok(())
                             },
                             KombiCustomCommand::StopDisplay => {
@@ -470,6 +489,10 @@ impl CDMIsoTp {
                                     Ok(())
                                 }
                             },
+                            KombiCustomCommand::StopDisplayExtern => {
+                                display_open = false;
+                                sock.write_packet(&[0x00, 0x00, 0x00]).unwrap().await
+                            }
                         };
                         if response.is_ok() && req_ack { // Only await ack if tx buffer != 0x00
                             cmd_to_ack = Some(command);
@@ -495,7 +518,7 @@ impl CDMIsoTp {
     }
 
     pub fn stop_display(&self) {
-        let _ = self.sender.send(KombiCustomCommand::StopDisplay);
+        let _ = self.sender.send(KombiCustomCommand::StopDisplayExtern);
     }
 
     pub fn show_display(&self, text: String, duration: u32) {

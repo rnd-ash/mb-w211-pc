@@ -9,8 +9,8 @@
 #include "../lib/w211_canb/src/DBE.h"
 #include "../lib/w211_canb/src/PC.h"
 
-#define CAN_TX_PIN gpio_num_t::GPIO_NUM_5
-#define CAN_RX_PIN gpio_num_t::GPIO_NUM_18
+#define CAN_RX_PIN gpio_num_t::GPIO_NUM_5
+#define CAN_TX_PIN gpio_num_t::GPIO_NUM_18
 
 class Can {
 public:

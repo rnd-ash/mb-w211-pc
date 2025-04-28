@@ -13,3 +13,4 @@ tokio-socketcan = "0.3.1"
 futures-util = "0.3.30"
 w211_can = { path="../w211_can" }
 bitflags = "2.5.0"
+ambisonic = "0.4.1"

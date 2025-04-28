@@ -1,83 +1,97 @@
-use std::{process::exit, thread, time::Duration};
+use std::{path::Path, process::exit, thread, time::Duration};
 
 use clap::Parser;
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, sync::mpsc::{UnboundedReceiver, UnboundedSender}};
-use tokio_serial::{SerialPort, SerialPortBuilderExt, SerialPortInfo, SerialPortType};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt, ReadHalf}, sync::mpsc::{UnboundedReceiver, UnboundedSender}};
+use tokio_serial::{SerialPort, SerialPortBuilderExt, SerialPortInfo, SerialPortType, SerialStream};
 use tokio_socketcan::{CANFrame, CANSocket};
 use w211_can::{canbus::CanBus};
-use futures_util::{stream::StreamExt, TryFutureExt};
+use futures_util::{io::ReadExact, stream::StreamExt, TryFutureExt};
 
 #[derive(Debug, Clone, Parser)]
 pub struct AppSettings {
-    baud: u32
+    binf: String,
+    baud: u32,
 }
 
-pub fn can_frame_from_bytes(b: &[u8; 16]) -> Option<(CanBus, CANFrame)> {
-    let bus_tag = match b[0] & 0b11 {
-        0b01 => CanBus::B,
-        0b10 => CanBus::C,
-        0b11 => CanBus::E,
-        _ => return None
-    };
-    let id = ((b[2] as u16) << 8) | ((b[1] as u16));
-    if id > 0x7FF {
-        return None;
+pub fn can_frame_from_bytes(bytes: &[u8; 16]) -> Option<(CanBus, CANFrame)> {
+    // Signature has already been checked
+    let targ_crc = bytes[15];
+    let mut my_crc = 0u8;
+    for i in 0..15u8 {
+        my_crc = my_crc.wrapping_add(i).wrapping_add(bytes[i as usize]);
     }
-    let dlc = b[3];
-    if dlc > 8 {
-        return None;
+    if my_crc != targ_crc {
+        log::error!("[Rx frame] CRC mismatch!. Calc: {:02X}. Buf: {:02X?}", my_crc, bytes);
+        None
+    } else {
+        // CRC OK
+        let id = bytes[5] as u16 | (bytes[6] as u16) << 8;
+        let dlc = bytes[4] & 0x0F;
+        let net = (bytes[4] & 0xF0) >> 4;
+        if dlc == 0 || dlc > 8 {
+            log::error!("[Rx frame] Invalid CAN DLC {}", dlc);
+            None
+        } else if id > 0x7FF {
+            log::error!("[Rx frame] Invalid CAN ID: {:04X}", id);
+            None
+        } else if net == 0 || net > 3 {
+            log::error!("[Rx frame] Invalid net ID: {}", net);
+            None
+        } else {
+            // Valid!
+            Some((unsafe { std::mem::transmute(net) },
+                CANFrame::new(id as u32, &bytes[7..7+dlc as usize], false, false).unwrap()
+            ))
+        }
+
     }
-    if
-        b[12] != 0xDE ||
-        b[13] != 0xAD ||
-        b[14] != 0xBE ||
-        b[15] != 0xEF
-    {
-        return None;
-    }
-    // Can Frame OK!
-    Some((bus_tag,
-        CANFrame::new(id as u32, &b[4..4+dlc as usize], false, false).unwrap()
-    ))
 
 } 
 
 fn from_can_to_pc_frame(f: &CANFrame, bus: CanBus, buf: &mut [u8; 16]) {
-    let id = f.id();
-    buf[0] = bus as u8;
-    buf[1] = (id & 0xFF) as u8;
-    buf[2] = ((id >> 8) & 0xFF) as u8;
-    buf[3] = f.data().len() as u8;
-    buf[4..4+f.data().len()].copy_from_slice(&f.data());
-    buf[12] = 0xDE;
-    buf[13] = 0xAD;
-    buf[14] = 0xBE;
-    buf[15] = 0xEF;
-}
 
-pub const VID: u16 = 0x03eb;
-pub const PID: u16 = 0x2175;
+    buf[0] = 0xDE;
+    buf[1] = 0xAD;
+    buf[2] = 0xBE;
+    buf[3] = 0xEF;
+    buf[4] = (bus as u8) << 4 | f.data().len() as u8;
+    buf[5] = (f.id() & 0xFF) as u8;
+    buf[6] = ((f.id() >> 8) & 0xFF) as u8;
+    buf[7..7+f.data().len()].copy_from_slice(f.data());
+    // Last byte is CRC
+    let mut res = 0u8;
+    for i in 0..15u8 {
+        res = res.wrapping_add(i).wrapping_add(buf[i as usize]);
+    }
+    buf[15] = res;
+}
 
 #[allow(non_snake_case)]
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    env_logger::init();
     let settings = AppSettings::parse();
     println!("Waiting for port to be available");
-    let port_info: SerialPortInfo;
+    let port_name: String;
+    let s =format!("/sys/bus/usb/devices/{}/", settings.binf);
     'search: loop {
-        for port in tokio_serial::available_ports().unwrap_or_default() {
-            if let SerialPortType::UsbPort(usb) = &port.port_type {
-                if usb.vid == VID && usb.pid == PID {
-                    port_info = port.clone();
-                    println!("Found {:04X}:{:04X} on {}", VID, PID, port.port_name);
-                    break 'search;
+        let p = Path::new(&s);
+        println!("{} {}", p.exists(), p.is_dir());
+        if p.exists() && p.is_dir() {
+            if let Ok(children) = std::fs::read_dir(p) {
+                for c in children {
+                    if let Ok(c) = c {
+                        if c.file_name().to_str().unwrap().contains("tty") {
+                            port_name = format!("/dev/{}", c.file_name().to_str().unwrap());
+                            break 'search;
+                        }
+                    }
                 }
             }
         }
         thread::sleep(Duration::from_millis(500));
     }
     println!("Port ready!");
-
     let canb = tokio_socketcan::CANSocket::open("vcan_b").unwrap();
     let canc = tokio_socketcan::CANSocket::open("vcan_c").unwrap();
     let cane = tokio_socketcan::CANSocket::open("vcan_e").unwrap();
@@ -113,7 +127,8 @@ async fn main() {
     spawn_can_thread(from_cane, cane_sender, cane, CanBus::E);
 
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
-    let mut port = tokio_serial::new(port_info.port_name, settings.baud)
+    
+    let mut port = tokio_serial::new(port_name, settings.baud)
         .timeout(Duration::from_millis(1000))
         .data_bits(tokio_serial::DataBits::Eight)
         .flow_control(tokio_serial::FlowControl::None)
@@ -124,41 +139,46 @@ async fn main() {
     let (mut port_read, mut port_write) = tokio::io::split(port);
     println!("Starting workers");
     runtime.spawn(async move {
-        let mut buf: [u8; 16] = [0; 16];
         loop {
-            match port_read.read_exact(&mut buf).await {
-                Ok(16) => {
-                    match can_frame_from_bytes(&buf) {
-                        Some((bus, frame)) => {
-                            match bus {
-                                CanBus::B => to_canb.send(frame).unwrap(),
-                                CanBus::C => to_canc.send(frame).unwrap(),
-                                CanBus::E => to_cane.send(frame).unwrap(),
-                            };
-                        },
-                        None => {
-                            eprintln!("CAN Decode error! Buffer was {buf:02X?}");
-                            let mut b = 0x00;
-                            let mut counter = 0;
-                            loop {
-                                b = port_read.read_u8().await.unwrap();
-                                println!("Read {b:02X?}");
-                                if b == 0xEF {
-                                    break;
-                                } else {
-                                    counter+=1;
-                                }
-                                if counter == 16 {
-                                    eprintln!("MAX RETRIES REACHED");
-                                    exit(1);
-                                }
-                            }
-                        }
+
+            #[inline]
+            async fn try_read_frame(uart: &mut ReadHalf<SerialStream>) -> tokio::io::Result<Option<(CanBus, CANFrame)>> {
+                let mut buf: [u8; 16] = [0; 16];
+                // First, read the first 4 bytes (our signature)
+
+                // We read the first byte alone so that the UART's RX buffer is rotated on
+                // successive read failures until the magic byte is located and the rest
+                // of the signature passes
+                loop {
+                    uart.read_exact(&mut buf[..1]).await?; // Byte 0 of sig
+                    if (buf[0]) == 0xDE {
+                        
+                        break; // Break when we maybe have our first magic byte located
                     }
-                },
-                Ok(x) => {
-                    eprintln!("Could not read full 16 bytes, only {x}!");
                 }
+                uart.read_exact(&mut buf[1..4]).await?; // Byte 1-4 of the sig
+                if &buf[..4] != &[0xDE, 0xAD, 0xBE, 0xEF] { // Full signature we expect
+                    // Invalid sig!
+                    return Ok(None);
+                }
+                // Read the remaining 12 bytes
+                uart.read_exact(&mut buf[4..]).await?;
+                Ok(can_frame_from_bytes(&buf))
+            }
+
+            match try_read_frame(&mut port_read).await {
+                Ok(Some((bus, frame))) => {
+                    match bus {
+                        CanBus::B => to_canb.send(frame).unwrap(),
+                        CanBus::C => to_canc.send(frame).unwrap(),
+                        CanBus::E => to_cane.send(frame).unwrap(),
+                    };
+                }
+                // Read OK but invalid data
+                Ok(None) => {
+                    eprintln!("Invalid data read");
+                }
+                // UART error
                 Err(e) => {
                     println!("Device disconnected! Exiting: {}", e.to_string());
                     exit(1);

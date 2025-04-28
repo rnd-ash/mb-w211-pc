@@ -2,7 +2,7 @@
 
 
 USER="mercedes"
-HOST=10.42.0.209
+HOST=w211-e55
 DEST="/home/mercedes/"
 APP="lcp_emu"
 

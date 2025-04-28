@@ -1,0 +1,9 @@
+{
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "rust-analyzer.cargo.allTargets": false,
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.diagnostics.disabled": [
+        "macro-error"
+    ],
+    "vscode-serial-monitor.customBaudRates": [921600]
+}

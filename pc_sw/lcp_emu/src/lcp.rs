@@ -1,5 +1,6 @@
-use std::{sync::{Arc, RwLock}, time::Duration};
+use std::{io::Cursor, sync::{Arc, RwLock}, time::Duration};
 
+use ambisonic::{rodio::{Decoder, Source}, Ambisonic, AmbisonicBuilder};
 use bitflags::bitflags;
 use eframe::egui::Color32;
 use futures_util::{SinkExt, StreamExt};
@@ -62,7 +63,8 @@ impl Default for ButtonLEDMatrix {
 pub struct Lcp {
     seat_colour_matrix: Arc<RwLock<ButtonLEDMatrix>>,
     press_matrix: ButtonPressFlags,
-    sender: UnboundedSender<ButtonPressFlags>
+    sender: UnboundedSender<ButtonPressFlags>,
+    audio_scene: Ambisonic,
 }
 
 impl Lcp {
@@ -71,6 +73,8 @@ impl Lcp {
         let button_matrix_c = button_matrix.clone();
         
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<ButtonPressFlags>();
+
+        let audio = AmbisonicBuilder::new().build();
 
         rt.clone().spawn(async move {
             let b = loop {
@@ -182,7 +186,8 @@ impl Lcp {
         Self {
             seat_colour_matrix: button_matrix,
             press_matrix: ButtonPressFlags::empty(),
-            sender: tx
+            sender: tx,
+            audio_scene: audio,
         }
     }
 
@@ -207,6 +212,10 @@ impl Lcp {
         if matrix_now != self.press_matrix {
             // Notify
             let _ = self.sender.send(self.press_matrix);
+            let click_noise = include_bytes!("../click1.mp3").to_vec();
+            let click_corsor = Cursor::new(click_noise);
+            let r = ambisonic::rodio::Decoder::new_mp3(click_corsor).unwrap();
+            self.audio_scene.play_at(r.convert_samples(), [0.0, 0.0, 1.0]);
         }
     }
 

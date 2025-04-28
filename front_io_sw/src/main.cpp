@@ -11,12 +11,12 @@
 
 
 
-#define PIN_5V_SHUTOFF GPIO_NUM_26
-#define HZARD_PIN GPIO_NUM_27
-#define HZARD_BACKLIGHT_PIN GPIO_NUM_13
-#define HZARD_LIGHT_PIN GPIO_NUM_22
-#define LED_PWM_PIN GPIO_NUM_19
-#define PIN_COOLER_FAN GPIO_NUM_23
+#define PIN_5V_SHUTOFF GPIO_NUM_12
+#define HZARD_PIN GPIO_NUM_26
+#define HZARD_BACKLIGHT_PIN GPIO_NUM_14
+#define HZARD_LIGHT_PIN GPIO_NUM_27
+#define LED_PWM_PIN GPIO_NUM_15
+#define PIN_COOLER_FAN GPIO_NUM_13
 
 bool hazards_on = false;
 
@@ -90,7 +90,7 @@ static void IRAM_ATTR on_hazards_pressed(void *args) {
 
 void sleep_and_wakeup() {
     ESP_LOGI("S&W", "Going to sleep!");
-    gpio_set_level(PIN_5V_SHUTOFF, 0); // Shut down 5V rail for the HDMI board
+    gpio_set_level(PIN_5V_SHUTOFF, 1); // Shut down 5V rail for the HDMI board
     gpio_set_level(HZARD_LIGHT_PIN, 0); // Turn off hazards light pin
     gpio_set_level(HZARD_BACKLIGHT_PIN, 0); // Turn off hazard backlight pin
     gpio_set_level(PIN_COOLER_FAN, 0); // Turn off fan
@@ -113,15 +113,17 @@ void sleep_and_wakeup() {
     gpio_set_intr_type(HZARD_PIN, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(HZARD_PIN, on_hazards_pressed, nullptr);
     gpio_set_level(PIN_COOLER_FAN, 1);
+    gpio_set_level(HZARD_LIGHT_PIN, 1);
     //configure_pwm_channel(FanPwmConfig, 192); // Configure fan
     configure_pwm_channel(BackLightPwmConfig, 128); // Configure backlight
-    gpio_set_level(PIN_5V_SHUTOFF, 1);
+    gpio_set_level(PIN_5V_SHUTOFF, 0);
+    gpio_set_level(HZARD_BACKLIGHT_PIN, 0);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
 }
 
 void backlight_demo(void*) {
     uint8_t pwm = 0xFF;
     uint8_t pwm_target = 0xFF;
-    while(1) {
+    while(1) {  
         pwm_target = can->get_light_level_target_display();
         ledc_set_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, BackLightPwmConfig.channel, 0xFF-pwm);
         ledc_update_duty(ledc_mode_t::LEDC_HIGH_SPEED_MODE, BackLightPwmConfig.channel);
@@ -135,16 +137,28 @@ void backlight_demo(void*) {
 }
 
 extern "C" void app_main(void) {
+    gpio_reset_pin(PIN_5V_SHUTOFF);
+    gpio_reset_pin(PIN_COOLER_FAN);
+    gpio_reset_pin(LED_PWM_PIN);
+
+    gpio_reset_pin(HZARD_BACKLIGHT_PIN);
+    gpio_reset_pin(HZARD_LIGHT_PIN);
+    gpio_reset_pin(HZARD_PIN);
+    gpio_reset_pin(CAN_RX_PIN);
+    gpio_reset_pin(CAN_TX_PIN);
+
     gpio_set_direction(PIN_5V_SHUTOFF, gpio_mode_t::GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_COOLER_FAN, gpio_mode_t::GPIO_MODE_OUTPUT);
     gpio_set_direction(HZARD_LIGHT_PIN, gpio_mode_t::GPIO_MODE_OUTPUT);
     gpio_set_direction(HZARD_PIN, gpio_mode_t::GPIO_MODE_INPUT);
+    gpio_pullup_en(HZARD_PIN);
     gpio_install_isr_service(0);
     gpio_set_intr_type(HZARD_PIN, GPIO_INTR_POSEDGE);
     gpio_isr_handler_add(HZARD_PIN, on_hazards_pressed, nullptr);
-    gpio_set_level(HZARD_LIGHT_PIN, 1);
-    gpio_set_level(PIN_5V_SHUTOFF, 1);
+    gpio_set_level(HZARD_LIGHT_PIN, 0);
+    gpio_set_level(PIN_5V_SHUTOFF, 0);
     gpio_set_level(PIN_COOLER_FAN, 1);
+    gpio_set_level(HZARD_BACKLIGHT_PIN, 0);
     can = new Can();
     can->setup_tasks();
     can->setup();

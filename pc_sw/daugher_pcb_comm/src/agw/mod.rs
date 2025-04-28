@@ -43,7 +43,7 @@ pub struct AgwEmulator {
     /// Bluetooth manager
     _bluetooth_handler: BluetoothManager,
     /// Wheel key (MRM) input layer
-    //key_manager: WheelKeyManager,
+    sender_keys: UnboundedSender<W213WheelKey>,
     sender: UnboundedSender<AgwCommand>,
 }
 
@@ -113,6 +113,7 @@ impl AgwEmulator {
                     Some(cmd) = receiver.recv() => {
                         let _ = match cmd {
                             AgwCommand::Wakeup => {
+                                
                             }
                             AgwCommand::SetAudioPage(p) => {
                                 let _ = a_cmd.send(AudioPageCmd::SetPage(p));
@@ -157,11 +158,10 @@ impl AgwEmulator {
         });
         let bt = BluetoothManager::new(sender.clone(), rt.handle());
         let bt_c = bt.clone();
-        let mut key_manager = WheelKeyManager::new(can_name.clone());
+        let (mut key_manager, ext_event_sender) = WheelKeyManager::new(can_name.clone());
         //let key_manager_c = key_manager.clone();
         let _t_plus = Instant::now();
         let _t_minus = Instant::now();
-
 
         let mixer_data : Arc<RwLock<(f32,f32,f32,f32)>> = Arc::new(RwLock::new((1.0, 1.0, 1.0, 1.0)));
         let _mixer_data_c = mixer_data.clone();
@@ -176,16 +176,20 @@ impl AgwEmulator {
                     match key {
                         W213WheelKey::VolUp => {
                             muted = false;
-                            mgr.offset_volume(300);
+                            mgr.offset_volume(0.01);
                         },
                         W213WheelKey::VolDown => {
                             muted = false;
-                            mgr.offset_volume(-300);
+                            mgr.offset_volume(-0.01);
                         },
                         W213WheelKey::Mute => {
                             muted = !muted;
                             mgr.set_mute(muted);
                         },
+                        W213WheelKey::UnMute => {
+                            mgr.set_mute(false);
+                            muted = false;
+                        }
                         W213WheelKey::UpSwipe => {
                             if page == KombiPage::Audio {
                                 bt_c.send_media_control(BtCommand::Next);
@@ -208,11 +212,13 @@ impl AgwEmulator {
             }
         });
 
-        Self {
+        let s = Self {
             _bluetooth_handler: bt,
-            //key_manager,
+            sender_keys: ext_event_sender,
             sender
-        }
+        };
+        let _ = s.sender_keys.send(W213WheelKey::UnMute);
+        s
     }
 
     pub fn send_agw_command(&self, cmd: AgwCommand) {
@@ -221,5 +227,6 @@ impl AgwEmulator {
 
     pub fn wakeup(&self) {
         let _ = self.sender.send(AgwCommand::Wakeup);
+        let _ = self.sender_keys.send(W213WheelKey::UnMute);
     }
 }

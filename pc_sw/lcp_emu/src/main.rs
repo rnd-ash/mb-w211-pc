@@ -38,7 +38,7 @@ fn make_pair<T>(init: T) -> (Arc<T>, Arc<T>) {
     (c.clone(), c)
 }
 
-pub const AUDIO_OUTPUT: &str = "alsa_output.usb-0d8c_USB_Sound_Device-00.analog-surround-51";
+pub const AUDIO_OUTPUT: &str = "@DEFAULT_AUDIO_SINK@";
 
 impl LowerControlPanelUI {
     pub fn new(ctx: &egui::Context, runtime: Runtime) -> Self {
@@ -70,17 +70,18 @@ impl LowerControlPanelUI {
 
         std::thread::spawn(move|| {
             loop { 
-                if let Ok(output) = process::Command::new("/usr/bin/pactl")
+                if let Ok(output) = process::Command::new("/usr/bin/wpctl")
                     .args(&[
-                        "get-sink-volume",
+                        "get-volume",
                         AUDIO_OUTPUT
                     ]).output().map(|x| String::from_utf8(x.stdout).unwrap()) {
-                        let parts: Vec<&str> = output.split(" ").collect();
-                        if let Some(v) = parts.get(2) {
-                            if let Ok(as_int) = v.parse::<u16>() {
-                                let v_max = (u16::MAX/2) as u32;
-                                let v_now = as_int as u32 * 100;
-                                volume_c.store(v_now / v_max, Ordering::Relaxed);
+                        let parts: Vec<&str> = output.split(": ").collect();
+                        if let Some(v) = parts.get(1) {
+                            let r = v.replace("\n", "");
+                            if let Ok(as_int) = r.parse::<f32>() {
+                                let v_max = 0.8;
+                                let v_now = as_int * 100.0;
+                                volume_c.store((v_now / v_max) as u32, Ordering::Relaxed);
                             }
                         }
                     }
