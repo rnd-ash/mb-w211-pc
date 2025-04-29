@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 cortex-m = {version="0.7", features = ["critical-section-single-core"]}
-atsamd-hal = {version="0.21.2", features=["same51j-rt", "rtic", "can", "dma", "async", "defmt"]}
+atsamd-hal = {git="https://github.com/rnd-ash/atsamd", branch="adc_v2", features=["same51j-rt", "rtic", "can", "dma", "async", "defmt"]}
 panic-rtt-target = { version = "0.2.0" }
 embedded-hal = "1.0"
 embedded-hal-nb = "1.0"

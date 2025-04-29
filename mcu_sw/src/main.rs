@@ -6,11 +6,11 @@ mod can;
 mod io;
 mod paddle_emu;
 
-use atsamd_hal::sercom::Sercom1;
+use atsamd_hal::{adc, rtc::rtic::rtc_clock, sercom::Sercom1};
 
 use panic_rtt_target as _; // For panics
 
-rtic_monotonics::systick_monotonic!(Mono);
+atsamd_hal::rtc_monotonic!(Mono, rtc_clock::Clock1k);
 
 atsamd_hal::bind_multiple_interrupts!(struct DmacIrqs {
     DMAC: [DMAC_0, DMAC_1, DMAC_2, DMAC_OTHER] => atsamd_hal::dmac::InterruptHandler;
@@ -20,17 +20,21 @@ atsamd_hal::bind_multiple_interrupts!(struct Sercom1Irqs {
     SERCOM1: [SERCOM1_0, SERCOM1_1, SERCOM1_2, SERCOM1_OTHER] => atsamd_hal::sercom::uart::InterruptHandler<Sercom1>;
 });
 
+atsamd_hal::bind_multiple_interrupts!(struct Adc0Irqs {
+    ADC0: [ADC0_RESRDY, ADC0_OTHER] => atsamd_hal::adc::InterruptHandler<adc::Adc0>;
+});
+
 #[rtic::app(device = bsp::pac, peripherals = true, dispatchers = [EVSYS_0])]
 mod app {
 
     use super::*;
     use crate::{
-        bsp::{uart, AmpMosfet, AmpMute, AmpStandby, PcMosfet, UartPads},
+        bsp::{uart, AmpCurrentSense, AmpMosfet, AmpMute, AmpStandby, PcCurrentSense, PcMosfet, UartPads, VSense},
         can::{uart_read_frame, Can0RxFifo0, Can0Tx, Can1RxFifo0, Can1Tx},
         io::BoardIO,
         paddle_emu::PaddleEmulator,
     };
-    use atsamd_hal::dmac::{Ch0, Ch1};
+    use atsamd_hal::{adc::{self, Adc}, clock::v2::{ahb::Ahb, osculp32k::{OscUlp1k, OscUlp32k}, rtcosc::RtcOsc}, dmac::{Ch0, Ch1}, pac::Supc};
     use atsamd_hal::{
         can::Dependencies,
         clock::v2::{
@@ -48,7 +52,7 @@ mod app {
     };
     use bsp::{CanCShutdown, OnboardLED};
     use can::{Can0Aux, CanNet, Capacities, SerialCanFrame};
-    use cortex_m::asm::nop;
+    use cortex_m::asm::{nop, wfi};
     use defmt_rtt as _;
     use fugit::ExtU32;
     use fugit::*;
@@ -110,7 +114,7 @@ mod app {
         // Initialization (Called on startup)
         let pins = bsp::Pins::new(cx.device.port);
         // CPU is at default 48Mhz here
-        let (_buses, clocks, tokens) = clock_system_at_reset(
+        let (mut buses, clocks, tokens) = clock_system_at_reset(
             cx.device.oscctrl,
             cx.device.osc32kctrl,
             cx.device.gclk,
@@ -130,7 +134,8 @@ mod app {
         //     └── DPLL1(160Mhz)
         //         └── GCLK2(80Mhz)
         //             ├── CAN0
-        //             └── CAN1
+        //             ├── CAN1
+        //             └── ADC0
 
         // GCLK 1 is formed by taking DFLL48 and dividing by 24 to get 2Mhz
         let (gclk1, dfll) = Gclk::from_source(tokens.gclks.gclk1, clocks.dfll);
@@ -147,17 +152,22 @@ mod app {
             .loop_div(80, 0)
             .enable();
         // Swap GCLK0 from DFLL to DPLL0 so it runs at 100Mhz
-        let (gclk0, _dfll, _dpll0) = clocks.gclk0.swap_sources(dfll, dpll0);
+        //let (gclk0, _dfll, _dpll0) = clocks.gclk0.swap_sources(dfll, dpll0);
         // Start GCLK2 off DPLL1 with a divider of 2 (160Mhz/2) = 80Mhz
         let (gclk2_uninit, _dpll1) = Gclk::from_source(tokens.gclks.gclk2, dpll1);
         let gclk2 = gclk2_uninit.div(GclkDiv8::Div(2)).enable();
 
         // Peripheral clock enabling
-        let (pclk_sercom1, gclk0) = Pclk::enable(tokens.pclks.sercom1, gclk0);
+        let (pclk_sercom1, gclk2) = Pclk::enable(tokens.pclks.sercom1, gclk2);
         let (pclk_canb, gclk2) = Pclk::enable(tokens.pclks.can0, gclk2);
         let (pclk_canc, gclk2) = Pclk::enable(tokens.pclks.can1, gclk2);
+        let (pclk_adc0, gclk2) = Pclk::enable(tokens.pclks.adc0, gclk2);
 
-        Mono::start(cx.core.SYST, gclk0.freq().to_Hz()); // Start time driver now that clocks are ready
+        // Enable RTC and start time driver for RTIC using that
+        let (osculp1k, _) = OscUlp1k::enable(tokens.osculp32k.osculp1k, clocks.osculp32k_base);
+        let _ = RtcOsc::enable(tokens.rtcosc, osculp1k);
+        Mono::start(cx.device.rtc); // Start time driver now that clocks are ready
+        cx.core.SCB.set_sleepdeep();
 
         // -- CAN Configuration and setup
         let (deps_canb, gclk2) = Dependencies::new(
@@ -321,6 +331,12 @@ mod app {
             .with_tx_dma_channel(dma_uart_tx);
         let (uart_rx, uart_tx) = uart_future.split();
 
+        // ADC0 setup (For Vsense, Current_PC, Current_Amp)
+        let adc_config = adc::Config::new();
+        let apb_adc = buses.apb.enable(tokens.apbs.adc0);
+        let adc0: Adc<adc::Adc0> = Adc::new(cx.device.adc0, adc_config, apb_adc, &pclk_adc0).unwrap();
+        let adc0_fut = adc0.into_future(Adc0Irqs);
+
         // IO Pins
         let onboard_led: OnboardLED = pin_alias!(pins.onboard_led).into();
         let pc_mosfet: PcMosfet = pin_alias!(pins.pc_mosfet).into();
@@ -328,21 +344,30 @@ mod app {
         let amp_mute: AmpMute = pin_alias!(pins.amp_mute).into();
         let amp_standby: AmpStandby = pin_alias!(pins.amp_standby).into();
         let can_c_shutdown: CanCShutdown = pin_alias!(pins.can_c_shutdown).into();
+        // ADC Pins
+        let v_sense: VSense = pin_alias!(pins.v_sense).into();
+        let curr_sense_amp: AmpCurrentSense = pin_alias!(pins.amp_c_sense).into();
+        let curr_sense_pc: PcCurrentSense = pin_alias!(pins.pc_c_sense).into();
 
         let board_io = BoardIO::new(
+            adc0_fut,
             amp_mosfet,
             pc_mosfet,
             amp_mute,
             amp_standby,
             can_c_shutdown,
+            v_sense,
+            curr_sense_pc,
+            curr_sense_amp,
             rx_ezs_a1,
             rx_cane,
+            tx_serial_can.clone(),
             Mono::now(),
         );
         let paddle_emu = PaddleEmulator::new(rx_mrm);
         serial_tx_handler::spawn().unwrap();
         serial_rx_handler::spawn().unwrap();
-        io_controller::spawn(tx_canc_sender.clone()).unwrap();
+        io_controller::spawn(tx_canc_sender.clone(), cx.device.supc).unwrap();
         can_b_tx::spawn().unwrap();
         can_c_tx::spawn().unwrap();
         (
@@ -375,20 +400,36 @@ mod app {
         )
     }
 
+    #[idle]
+    fn idle(_cx: idle::Context) -> ! {
+        loop {
+            wfi();
+        }
+    }
+
     #[task(priority=1, local=[board_io, paddle_emu], shared=[key_active])]
     async fn io_controller(
         mut cx: io_controller::Context,
         mut tx_c: Sender<'static, SerialCanFrame, 10>,
+        supc: Supc
     ) {
+        supc.vref().write(|w| {
+            w.ondemand().set_bit();
+            w.tsen().set_bit()
+        });
         loop {
-            let key_state = cx.local.board_io.update();
+            let key_state = cx.local.board_io.update(&supc).await;
             let tx_canc_mrm = cx.local.paddle_emu.generate_mrm_tx_frame();
+            cx.shared.key_active.lock(|r| *r = key_state);
             if key_state {
                 let f = SerialCanFrame::new(CanNet::C, 0x232, &tx_canc_mrm);
                 let _ = tx_c.try_send(f);
             }
-            cx.shared.key_active.lock(|r| *r = key_state);
-            Mono::delay(20u32.millis()).await;
+            if cx.local.board_io.is_shutdown {
+                wfi();
+            } else {
+                Mono::delay(20u64.millis()).await;
+            }
         }
     }
 

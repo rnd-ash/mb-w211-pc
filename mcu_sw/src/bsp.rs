@@ -1,5 +1,5 @@
 pub use atsamd_hal as hal;
-use atsamd_hal::clock::v2::gclk::Gclk0Id;
+use atsamd_hal::clock::v2::gclk::{Gclk0Id, Gclk2Id};
 use atsamd_hal::clock::v2::pclk::Pclk;
 use atsamd_hal::sercom::{IoSet1, Sercom1};
 pub use hal::pac;
@@ -11,6 +11,7 @@ hal::bsp_peripherals!(Sercom1 { UartSercom });
 
 hal::bsp_pins!(
     PA04 {
+        // ADC0[4]
         name: pc_c_sense
         aliases: {
             AlternateB: PcCurrentSense
@@ -35,12 +36,14 @@ hal::bsp_pins!(
         }
     }
     PA07 {
+        // ADC0[0] 
         name: vsense
         aliases: {
             AlternateB: VSense
         }
     }
     PB09 {
+        // ADC0[3]
         name: amp_c_sense
         aliases: {
             AlternateB: AmpCurrentSense
@@ -111,7 +114,7 @@ pub type Uart = uart::Uart<uart::Config<UartPads>, uart::Duplex>;
 /// Convenience for setting up the labelled RX, TX pins to
 /// operate as a UART device running at the specified baud.
 pub fn uart(
-    pclk_sercom1: Pclk<Sercom1, Gclk0Id>,
+    pclk_sercom1: Pclk<Sercom1, Gclk2Id>,
     baud: impl Into<Hertz>,
     sercom: Sercom1,
     mclk: &mut pac::Mclk,
