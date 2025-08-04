@@ -1,52 +1,57 @@
-use rtic_sync::channel::Receiver;
-use w211_can::canb::{MRM_A1, MRM_A1_CAN_ID, MRM_A2_CAN_ID};
+use core::cell::RefCell;
 
-use crate::can::frame_to_int;
+use embassy_sync::blocking_mutex::ThreadModeMutex;
+use w211_can::canb::MRM_A1;
+
 
 pub struct PaddleEmulator {
-    last_mrm_a1: MRM_A1,
-    last_mrm_a2_bytes: [u8; 8],
-
-    rx_mrm_data: Receiver<'static, (u16, [u8; 8]), 10>,
+    last_mrm_a1: ThreadModeMutex<RefCell<MRM_A1>>,
+    last_mrm_a2_bytes: ThreadModeMutex<RefCell<[u8; 8]>>,
 }
 
 impl PaddleEmulator {
-    pub fn new(rx_mrm_data: Receiver<'static, (u16, [u8; 8]), 10>) -> Self {
+    pub const fn new() -> Self {
         Self {
-            last_mrm_a1: MRM_A1::default(),
-            last_mrm_a2_bytes: [0; 8],
-            rx_mrm_data,
+            last_mrm_a1: ThreadModeMutex::new(RefCell::new(MRM_A1(0))),
+            last_mrm_a2_bytes: ThreadModeMutex::new(RefCell::new([0; 8])),
         }
     }
 
-    pub fn generate_mrm_tx_frame(&mut self) -> [u8; 4] {
-        // Fetch data
-        if let Ok((id, bytes)) = self.rx_mrm_data.try_recv() {
-            if id == MRM_A1_CAN_ID {
-                self.last_mrm_a1 = MRM_A1::new(frame_to_int(&bytes, 8));
-            } else if id == MRM_A2_CAN_ID {
-                self.last_mrm_a2_bytes = bytes;
-            } else {
-                defmt::error!("MRM Receiver invalid CAN ID: 0x{:03X}", id);
-            }
-        }
+    pub fn set_mrm_a1(&self, mrm: MRM_A1) {
+        self.last_mrm_a1.lock(|inner| {
+            *inner.borrow_mut() = mrm;
+        })
+    }
 
+    pub fn set_mrm_a2(&self, mrm: [u8; 8]) {
+        self.last_mrm_a2_bytes.lock(|inner| {
+            *inner.borrow_mut() = mrm;
+        })
+    }
+
+    pub fn generate_mrm_tx_frame(&self) -> [u8; 4] {
         // Process state
         let mut paddle = 0u8;
+        let mrm_a1 = self.last_mrm_a1.borrow().borrow().clone();
+        let mrm_a2 = self.last_mrm_a2_bytes.borrow().borrow().clone();
+
         // Wheel button MUX mode (Custom (Ash mode))
-        if self.last_mrm_a2_bytes[0] == 0x10 {
-            if self.last_mrm_a2_bytes[1] == 0x0F {
+        if mrm_a2[0] == 0x10 {
+            if mrm_a2[1] == 0x0F {
                 paddle = 1; // Upshift pressed
-            } else if self.last_mrm_a2_bytes[1] == 0x0E {
+            } else if mrm_a2[1] == 0x0E {
                 // Downshift pressed
                 //
                 // WAIT. The high beam stalk collides with this paddle.
                 // Check if the high beam temporary stalk is pulled, and then
                 // don't register this if it is pressed since its impossible for
                 // a user to press both high beam and shift paddle.
-                if !self.last_mrm_a1.get_LHP_EIN() {
+                if !mrm_a1.get_LHP_EIN() {
                     paddle = 2;
                 }
+            } else if mrm_a2[1] == 0x01 {
+                // IC Undo button pressed
+
             }
         }
         return [paddle, 0, 0, 0];
