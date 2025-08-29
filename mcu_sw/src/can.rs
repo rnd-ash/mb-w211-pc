@@ -79,31 +79,18 @@ pub fn int_to_frame(data: &[u8], dlc: u8) -> u64 {
     ret
 }
 
-#[derive(defmt::Format, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum CanNet {
     B = 1,
     C = 2,
     E = 3,
 }
 
-impl TryFrom<u8> for CanNet {
-    type Error = ();
+const SERIAL_FRAME_LEN: usize = 16;
 
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(Self::B),
-            2 => Ok(Self::C),
-            3 => Ok(Self::E),
-            _ => Err(())
-        }
-    }
-}
-
-pub const SERIAL_FRAME_LEN: usize = 16;
-
-#[derive(defmt::Format, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct SerialCanFrame {
-    pub net: CanNet,
+    pub net: u8,
     pub id: u16,
     pub dlc: u8,
     pub data: [u8; 8],
@@ -115,7 +102,7 @@ impl SerialCanFrame {
         let mut d = [0; 8];
         d[..dlc].copy_from_slice(&data[..dlc]);
         Self {
-            net,
+            net: net as u8,
             id,
             dlc: dlc as u8,
             data: d,
@@ -168,26 +155,21 @@ impl SerialCanFrame {
             // CRC OK
             let id = bytes[5] as u16 | (bytes[6] as u16) << 8;
             let dlc = bytes[4] & 0x0F;
-            let net_u8 = (bytes[4] & 0xF0) >> 4;
+            let net = (bytes[4] & 0xF0) >> 4;
             if dlc == 0 || dlc > 8 {
                 defmt::error!("[Rx frame] Invalid CAN DLC {}", dlc);
                 None
             } else if id > 0x7FF {
                 defmt::error!("[Rx frame] Invalid CAN ID: {:04X}", id);
                 None
+            } else if net == 0 || net > 3 {
+                defmt::error!("[Rx frame] Invalid net ID: {}", net);
+                None
             } else {
-                match CanNet::try_from(net_u8) {
-                    Ok(net) => {
-                        // Valid!
-                        let mut data = [0u8; 8];
-                        data[..dlc as usize].copy_from_slice(&bytes[7..7 + dlc as usize]);
-                        Some(SerialCanFrame { net, id, dlc, data })
-                    },
-                    Err(_) => {
-                        defmt::error!("[Rx frame] Invalid net ID: {}", net_u8);
-                        None
-                    }
-                }
+                // Valid!
+                let mut data = [0u8; 8];
+                data[..dlc as usize].copy_from_slice(&bytes[7..7 + dlc as usize]);
+                Some(SerialCanFrame { net, id, dlc, data })
             }
         }
     }
