@@ -5,56 +5,62 @@ mod bsp;
 mod can;
 mod io;
 mod paddle_emu;
+mod usb;
+
+use core::{panic::PanicInfo, sync::atomic::AtomicBool};
 
 use atsamd_hal::{adc, rtc::rtic::rtc_clock, sercom::Sercom1};
 
-use panic_rtt_target as _; // For panics
+use defmt_rtt as _;
 
-atsamd_hal::rtc_monotonic!(Mono, rtc_clock::Clock1k);
+atsamd_hal::rtc_monotonic!(Mono, rtc_clock::Clock32k);
 
-atsamd_hal::bind_multiple_interrupts!(struct DmacIrqs {
+atsamd_hal::bind_multiple_interrupts!(pub struct DmacIrqs {
     DMAC: [DMAC_0, DMAC_1, DMAC_2, DMAC_OTHER] => atsamd_hal::dmac::InterruptHandler;
 });
 
-atsamd_hal::bind_multiple_interrupts!(struct Sercom1Irqs {
+atsamd_hal::bind_multiple_interrupts!(pub struct Sercom1Irqs {
     SERCOM1: [SERCOM1_0, SERCOM1_1, SERCOM1_2, SERCOM1_OTHER] => atsamd_hal::sercom::uart::InterruptHandler<Sercom1>;
 });
 
-atsamd_hal::bind_multiple_interrupts!(struct Adc0Irqs {
+atsamd_hal::bind_multiple_interrupts!(pub struct Adc0Irqs {
     ADC0: [ADC0_RESRDY, ADC0_OTHER] => atsamd_hal::adc::InterruptHandler<adc::Adc0>;
 });
+
+#[panic_handler]
+fn on_panic(info: &PanicInfo) -> ! {
+    defmt::error!("{}", info);
+    loop{}
+}
 
 #[rtic::app(device = bsp::pac, peripherals = true, dispatchers = [EVSYS_0])]
 mod app {
 
+    use core::sync::atomic::Ordering;
+
     use super::*;
     use crate::{
-        bsp::{uart, AmpCurrentSense, AmpMosfet, AmpMute, AmpStandby, PcCurrentSense, PcMosfet, UartPads, VSense},
-        can::{uart_read_frame, Can0RxFifo0, Can0Tx, Can1RxFifo0, Can1Tx},
+        bsp::{AmpCurrentSense, AmpMosfet, AmpMute, AmpStandby, PcCurrentSense, PcMosfet, UartPads, VSense, uart},
+        can::{Can0RxFifo0, Can0Tx, Can1RxFifo0, Can1Tx, SERIAL_FRAME_LEN, uart_read_frame},
         io::BoardIO,
-        paddle_emu::PaddleEmulator,
+        paddle_emu::PaddleEmulator, usb::UsbIsrInfo,
     };
-    use atsamd_hal::{adc::{self, Adc}, clock::v2::{ahb::Ahb, osculp32k::{OscUlp1k, OscUlp32k}, rtcosc::RtcOsc}, dmac::{Ch0, Ch1}, pac::Supc};
+    use atsamd_hal::{adc::{self, AdcBuilder}, clock::v2::{gclk::Gclk3Id, osculp32k::OscUlp32k, rtcosc::RtcOsc}, dmac::{Ch0, Ch1}, pac::Supc, rtic_time::Monotonic, usb::{UsbBus, usb_device::{bus::UsbBusAllocator, device::{StringDescriptors, UsbDeviceBuilder, UsbVidPid}}}};
     use atsamd_hal::{
         can::Dependencies,
         clock::v2::{
             clock_system_at_reset,
             dpll::Dpll,
-            gclk::{Gclk, Gclk2Id, GclkDiv16, GclkDiv8},
+            gclk::{Gclk, GclkDiv16, GclkDiv8},
             pclk::Pclk,
             types::{Can0, Can1},
-            Source,
         },
         dmac::{DmaController, PriorityLevel},
-        pac::Peripherals,
         prelude::_atsamd_hal_embedded_hal_digital_v2_OutputPin,
-        sercom::uart::{self, UartFutureRxDuplexDma, UartFutureTxDuplexDma},
     };
     use bsp::{CanCShutdown, OnboardLED};
     use can::{Can0Aux, CanNet, Capacities, SerialCanFrame};
-    use cortex_m::asm::{nop, wfi};
     use defmt_rtt as _;
-    use fugit::ExtU32;
     use fugit::*;
     use mcan::{
         bus::DynAux,
@@ -68,47 +74,42 @@ mod app {
         messageram::SharedMemory,
         tx_buffers::DynTx,
     };
-    use rtic_monotonics::Monotonic;
-    use rtic_sync::channel::{Receiver, Sender};
+    use rtic_sync::{channel::{Receiver, Sender}, make_channel};
     use w211_can::canb::{EZS_A1_CAN_ID, MRM_A1_CAN_ID, MRM_A2_CAN_ID};
 
     #[local]
     struct Local {
         onboard_led: OnboardLED,
-        uart_rx: UartFutureRxDuplexDma<uart::Config<UartPads>, Ch0>,
-        uart_tx: UartFutureTxDuplexDma<uart::Config<UartPads>, Ch1>,
-        canb_aux: Can0Aux<Gclk2Id>,
+        canb_aux: Can0Aux<Gclk3Id>,
         canb_rx: Can0RxFifo0,
         canc_rx: Can1RxFifo0,
-        canb_tx: Can0Tx,
-        canc_tx: Can1Tx,
         canb_interrupts: OwnedInterruptSet<Can0, EnabledLine0>,
         canc_interrupts: OwnedInterruptSet<Can1, EnabledLine0>,
-        canb_serial_tx: Sender<'static, SerialCanFrame, 100>,
-        canc_serial_tx: Sender<'static, SerialCanFrame, 100>,
-        can_to_serial_recv: Receiver<'static, SerialCanFrame, 100>,
+        canb_serial_tx: Sender<'static, SerialCanFrame, 200>,
+        canc_serial_tx: Sender<'static, SerialCanFrame, 200>,
+        tx_cane: Sender<'static, SerialCanFrame, 10>,
+        can_to_serial_recv: Receiver<'static, SerialCanFrame, 200>,
+        serial_to_can_recv: Receiver<'static, SerialCanFrame, 200>,
         board_io: io::BoardIO,
         paddle_emu: paddle_emu::PaddleEmulator,
 
         tx_ezs_a1: Sender<'static, [u8; 8], 10>,
         tx_mrm_data: Sender<'static, (u16, [u8; 8]), 10>,
-
-        tx_canb_sender: Sender<'static, SerialCanFrame, 10>,
-        tx_canc_sender: Sender<'static, SerialCanFrame, 10>,
-        tx_canb_recv: Receiver<'static, SerialCanFrame, 10>,
-        tx_canc_recv: Receiver<'static, SerialCanFrame, 10>,
     }
 
     #[shared]
     struct Shared {
-        key_active: bool,
+        canb_tx: Can0Tx,
+        canc_tx: Can1Tx,
+        usb_isr_info: UsbIsrInfo<'static>,
     }
 
     #[init(local=[
         #[link_section = ".can"]
         can_memory0: SharedMemory<Capacities> = SharedMemory::new()
         #[link_section = ".can"]
-        can_memory1: SharedMemory<Capacities> = SharedMemory::new()
+        can_memory1: SharedMemory<Capacities> = SharedMemory::new(),
+        usb_bus_alloc: Option<UsbBusAllocator<UsbBus>> = None,
     ])]
     fn init(mut cx: init::Context) -> (Shared, Local) {
         // Initialization (Called on startup)
@@ -122,7 +123,7 @@ mod app {
             &mut cx.device.nvmctrl,
         );
         let (_, _, _, mut mclk) = unsafe { clocks.pac.steal() };
-
+        defmt::info!("RTIC Init");
         // Build the following clock tree
         //
         // DFLL(48Mhz)
@@ -130,12 +131,12 @@ mod app {
         //     ├── DPLL0(100Mhz)
         //     │   └── GCLK0(100Mhz)
         //     │       ├── F_CPU
-        //     │       └── SERCOM1
         //     └── DPLL1(160Mhz)
-        //         └── GCLK2(80Mhz)
-        //             ├── CAN0
-        //             ├── CAN1
-        //             └── ADC0
+        //         ├── GCLK2(80Mhz)
+        //         │   ├── CAN1 (C)
+        //         │   └── ADC0
+        //         └── GCLK3(2Mhz)
+        //              └── CAN0 (B)
 
         // GCLK 1 is formed by taking DFLL48 and dividing by 24 to get 2Mhz
         let (gclk1, dfll) = Gclk::from_source(tokens.gclks.gclk1, clocks.dfll);
@@ -152,63 +153,105 @@ mod app {
             .loop_div(80, 0)
             .enable();
         // Swap GCLK0 from DFLL to DPLL0 so it runs at 100Mhz
-        //let (gclk0, _dfll, _dpll0) = clocks.gclk0.swap_sources(dfll, dpll0);
+        let (gclk0, dfll, _dpll0) = clocks.gclk0.swap_sources(dfll, dpll0);
         // Start GCLK2 off DPLL1 with a divider of 2 (160Mhz/2) = 80Mhz
-        let (gclk2_uninit, _dpll1) = Gclk::from_source(tokens.gclks.gclk2, dpll1);
+        let (gclk2_uninit, dpll1) = Gclk::from_source(tokens.gclks.gclk2, dpll1);
+        let (gclk3_uninit, dfll) = Gclk::from_source(tokens.gclks.gclk3, dfll);
+        let (gclk4_uninit, dfll) = Gclk::from_source(tokens.gclks.gclk4, dfll);
         let gclk2 = gclk2_uninit.div(GclkDiv8::Div(2)).enable();
+        let gclk3 = gclk3_uninit.div(GclkDiv8::Div(24)).enable();
+        let gclk4 = gclk4_uninit.enable();
 
         // Peripheral clock enabling
         let (pclk_sercom1, gclk2) = Pclk::enable(tokens.pclks.sercom1, gclk2);
-        let (pclk_canb, gclk2) = Pclk::enable(tokens.pclks.can0, gclk2);
+        let (pclk_canb, _gclk3) = Pclk::enable(tokens.pclks.can0, gclk3);
         let (pclk_canc, gclk2) = Pclk::enable(tokens.pclks.can1, gclk2);
-        let (pclk_adc0, gclk2) = Pclk::enable(tokens.pclks.adc0, gclk2);
+        let (pclk_adc0, _gclk2) = Pclk::enable(tokens.pclks.adc0, gclk2);
+        let (pclk_usb, _gclk4) = Pclk::enable(tokens.pclks.usb, gclk4);
+
+        let usb_bus = UsbBus::new(
+            &pclk_usb.into(),
+            &mut mclk,
+            pins.usb_dm,
+            pins.usb_dp,
+            cx.device.usb,
+        );
+
+        let usb_allocator = cx.local.usb_bus_alloc.insert(UsbBusAllocator::new(usb_bus));
+
+        let serial = usbd_serial::SerialPort::new(usb_allocator);
+
+        let usb_device = UsbDeviceBuilder::new(
+            usb_allocator,
+            UsbVidPid(0x16c0, 0x0001),
+        )
+        .strings(&[StringDescriptors::default()
+            .manufacturer("rnd-ash")
+            .serial_number("211")
+            .product("w211-pc-mcu")])
+        .expect("Failed to set USB Strings")
+        .usb_rev(atsamd_hal::usb::usb_device::device::UsbRev::Usb200)
+        .device_protocol(usbd_serial::USB_CLASS_CDC)
+        .max_packet_size_0(64)
+        .unwrap()
+        .self_powered(true)
+        .max_power(240)
+        .unwrap()
+        .build();
+
+        let (serial_rx_sender, serial_tx_sender) = make_channel!(SerialCanFrame, 200);
+
+        let usb_isr_info = UsbIsrInfo {
+            dev: usb_device,
+            serial,
+            last_state: atsamd_hal::usb::usb_device::device::UsbDeviceState::Default,
+            buf: [0; SERIAL_FRAME_LEN],
+            sender_can_frames: serial_rx_sender
+        };
+
 
         // Enable RTC and start time driver for RTIC using that
-        let (osculp1k, _) = OscUlp1k::enable(tokens.osculp32k.osculp1k, clocks.osculp32k_base);
-        let _ = RtcOsc::enable(tokens.rtcosc, osculp1k);
+        let (osculp32k, _) = OscUlp32k::enable(tokens.osculp32k.osculp32k, clocks.osculp32k_base);
+        let _ = RtcOsc::enable(tokens.rtcosc, osculp32k);
+        defmt::info!("Mono start");
         Mono::start(cx.device.rtc); // Start time driver now that clocks are ready
-        cx.core.SCB.set_sleepdeep();
-
+        defmt::info!("Mono started");
         // -- CAN Configuration and setup
-        let (deps_canb, gclk2) = Dependencies::new(
-            gclk2,
+        let (deps_canb, gclk0) = Dependencies::new(
+            gclk0,
             pclk_canb,
             clocks.ahbs.can0,
             pin_alias!(pins.pa23).into_mode(),
             pin_alias!(pins.pa22).into_mode(),
             cx.device.can0,
         );
-        let (deps_canc, gclk2) = Dependencies::new(
-            gclk2,
+        let (deps_canc, _gclk0) = Dependencies::new(
+            gclk0,
             pclk_canc,
             clocks.ahbs.can1,
             pin_alias!(pins.pb13).into_mode(),
             pin_alias!(pins.pb12).into_mode(),
             cx.device.can1,
         );
-
-        // CANB is set to 83333 below via a hack
         let mut can_b =
-            mcan::bus::CanConfigurable::new(500_000u32.Hz(), deps_canb, cx.local.can_memory0)
+            mcan::bus::CanConfigurable::new(83_333u32.Hz(), deps_canb, cx.local.can_memory0)
                 .unwrap();
         let mut can_c =
             mcan::bus::CanConfigurable::new(500_000u32.Hz(), deps_canc, cx.local.can_memory1)
                 .unwrap();
 
-        let (tx_serial_can, rx_serial_can) = rtic_sync::make_channel!(SerialCanFrame, 100);
+        let (tx_serial_can, rx_serial_can) = rtic_sync::make_channel!(SerialCanFrame, 200);
 
         let (tx_ezs_a1, rx_ezs_a1) = rtic_sync::make_channel!([u8; 8], 10);
         let (tx_mrm, rx_mrm) = rtic_sync::make_channel!((u16, [u8; 8]), 10);
         let (tx_cane, rx_cane) = rtic_sync::make_channel!(SerialCanFrame, 10);
 
-        // Channels to write back to CAN
-        let (tx_canb_sender, tx_canb_recv) = rtic_sync::make_channel!(SerialCanFrame, 10);
-        let (tx_canc_sender, tx_canc_recv) = rtic_sync::make_channel!(SerialCanFrame, 10);
-
         can_b.config().loopback = false;
         can_b.config().mode = mcan::config::Mode::Classic;
         can_b.config().timestamp = mcan::config::Timestamp::default();
-        // Manual bit timing for 83_333
+        can_b.config().nominal_timing.allow_fractional = true;
+        can_b.config().nominal_timing.phase_seg_1 = 20;
+        can_b.config().nominal_timing.phase_seg_2 = 3;
 
         can_c.config().loopback = false;
         can_c.config().mode = mcan::config::Mode::Classic;
@@ -261,81 +304,21 @@ mod app {
                 mask: embedded_can::StandardId::ZERO,
             })
             .unwrap_or_else(|_| panic!("Could not set CAN1 filter"));
-        let can_c = can_c.finalize_initialized().unwrap();
+        
         let can_b = can_b.finalize_initialized().unwrap();
-        can_c.aux.operational_mode(); // Start up CAN C (CAN B is started below)\
-
-        // Bitrate hack for 83333bps Baud on CAN B
-        // See https://github.com/GrepitAB/mcan/issues/58
-        unsafe {
-            let div_round = |x: u32, y: u32| -> u32 { ((x) + (y) / 2) / (y) };
-
-            let div_round_up = |x: u32, y: u32| -> u32 { ((x) + (y) - 1) / (y) };
-            let f_can = gclk2.freq().to_Hz(); // 80000000
-            let clocks_per_bit = div_round(f_can, 83333); // 960
-            let clocks_to_sample = div_round_up(clocks_per_bit * 7, 8); // 840
-            let clocks_after_sample = clocks_per_bit - clocks_to_sample; // 120
-            let divisor = core::cmp::max(
-                div_round_up(clocks_to_sample, 256), // max(4, 1) -> 4
-                div_round_up(clocks_after_sample, 128),
-            );
-            // Hack to get 83333 working (80Mhz clock source)
-            let canb_reg = Peripherals::steal().can0;
-            // Put the CAN controller back into init mode
-
-            canb_reg.cccr().write(|w| w.init().set_bit());
-            while canb_reg.cccr().read().init().bit_is_clear() {
-                core::hint::spin_loop();
-            }
-            canb_reg.cccr().write(|w| w.cce().set_bit());
-
-            canb_reg.nbtp().reset();
-            canb_reg.nbtp().modify(|_, w| {
-                w.ntseg1()
-                    .bits(div_round(clocks_to_sample, divisor) as u8 - 2)
-                    .ntseg2()
-                    .bits(div_round(clocks_after_sample, divisor) as u8 - 1)
-                    .nbrp()
-                    .bits(divisor as u16 - 1)
-                    .nsjw()
-                    .bits(div_round(clocks_after_sample, divisor * 4) as u8)
-            });
-
-            canb_reg.cccr().write(|w| w.cce().clear_bit());
-            nop();
-            nop();
-            canb_reg.cccr().write(|w| w.init().clear_bit());
-            while canb_reg.cccr().read().init().bit_is_set() {
-                core::hint::spin_loop();
-            }
-        }
-
-        // -- DMA Setup - Use DMA for Tx and Rx of the UART peripheral
-        let dmac = DmaController::init(cx.device.dmac, &mut cx.device.pm);
-        let dma_channels = dmac.into_future(DmacIrqs).split();
-        let dma_uart_rx = dma_channels.0.init(PriorityLevel::Lvl0);
-        let dma_uart_tx = dma_channels.1.init(PriorityLevel::Lvl0);
-
-        // -- UART SETUP (Talk to PC)
-        let uart = uart(
-            pclk_sercom1,
-            921600u32.Hz(),
-            cx.device.sercom1,
-            &mut mclk,
-            pins.pa17,
-            pins.pa16,
-        );
-        let uart_future = uart
-            .into_future(Sercom1Irqs)
-            .with_rx_dma_channel(dma_uart_rx)
-            .with_tx_dma_channel(dma_uart_tx);
-        let (uart_rx, uart_tx) = uart_future.split();
+        let can_c = can_c.finalize_initialized().unwrap();
+        can_b.aux.operational_mode();
+        can_c.aux.operational_mode();
 
         // ADC0 setup (For Vsense, Current_PC, Current_Amp)
-        let adc_config = adc::Config::new();
         let apb_adc = buses.apb.enable(tokens.apbs.adc0);
-        let adc0: Adc<adc::Adc0> = Adc::new(cx.device.adc0, adc_config, apb_adc, &pclk_adc0).unwrap();
-        let adc0_fut = adc0.into_future(Adc0Irqs);
+        let adc0 = AdcBuilder::new(adc::Accumulation::Single(adc::AdcResolution::_12))
+            .with_clock_cycles_per_sample(8)
+            .with_clock_divider(adc::Prescaler::Div4)
+            .with_vref(adc::Reference::Intvcc1)
+            .enable(cx.device.adc0, apb_adc, &pclk_adc0)
+            .unwrap()
+            .into_future(Adc0Irqs);
 
         // IO Pins
         let onboard_led: OnboardLED = pin_alias!(pins.onboard_led).into();
@@ -350,7 +333,7 @@ mod app {
         let curr_sense_pc: PcCurrentSense = pin_alias!(pins.pc_c_sense).into();
 
         let board_io = BoardIO::new(
-            adc0_fut,
+            adc0,
             amp_mosfet,
             pc_mosfet,
             amp_mute,
@@ -367,76 +350,58 @@ mod app {
         let paddle_emu = PaddleEmulator::new(rx_mrm);
         serial_tx_handler::spawn().unwrap();
         serial_rx_handler::spawn().unwrap();
-        io_controller::spawn(tx_canc_sender.clone(), cx.device.supc).unwrap();
-        can_b_tx::spawn().unwrap();
-        can_c_tx::spawn().unwrap();
+        io_controller::spawn(cx.device.supc).unwrap();
         (
-            Shared { key_active: true },
+            Shared { 
+                canb_tx: can_b.tx,
+                canc_tx: can_c.tx,
+                usb_isr_info
+            },
             Local {
                 board_io,
                 onboard_led,
                 tx_ezs_a1,
                 tx_mrm_data: tx_mrm,
-                uart_tx: uart_tx,
-                uart_rx: uart_rx,
                 canb_aux: can_b.aux,
                 canb_rx: can_b.rx_fifo_0,
                 canc_rx: can_c.rx_fifo_0,
-                canb_tx: can_b.tx,
-                canc_tx: can_c.tx,
                 canb_serial_tx: tx_serial_can.clone(),
                 canc_serial_tx: tx_serial_can,
                 can_to_serial_recv: rx_serial_can,
+                serial_to_can_recv: serial_tx_sender,
+                
                 canb_interrupts: line_interrupts_canb,
                 canc_interrupts: line_interrupts_canc,
-
-                tx_canb_recv,
-                tx_canc_recv,
-
-                tx_canb_sender,
-                tx_canc_sender,
                 paddle_emu,
+                tx_cane
             },
         )
     }
 
-    #[idle]
-    fn idle(_cx: idle::Context) -> ! {
-        loop {
-            wfi();
-        }
-    }
-
-    #[task(priority=1, local=[board_io, paddle_emu], shared=[key_active])]
+    #[task(priority=1, local=[board_io, paddle_emu], shared=[canc_tx])]
     async fn io_controller(
         mut cx: io_controller::Context,
-        mut tx_c: Sender<'static, SerialCanFrame, 10>,
-        supc: Supc
+        mut supc: Supc
     ) {
-        supc.vref().write(|w| {
-            w.ondemand().set_bit();
-            w.tsen().set_bit()
-        });
+        defmt::info!("IO Controller task started");
         loop {
-            let key_state = cx.local.board_io.update(&supc).await;
+            let key_state = cx.local.board_io.update(&mut supc).await;
             let tx_canc_mrm = cx.local.paddle_emu.generate_mrm_tx_frame();
-            cx.shared.key_active.lock(|r| *r = key_state);
+            KEY_IN_EZS.store(key_state, Ordering::Relaxed);
             if key_state {
                 let f = SerialCanFrame::new(CanNet::C, 0x232, &tx_canc_mrm);
-                let _ = tx_c.try_send(f);
+                let _ = cx.shared.canc_tx.lock(|canc| {
+                    canc.transmit_queued(Message::new(f.to_can_msg()).unwrap())
+                });
             }
-            if cx.local.board_io.is_shutdown {
-                wfi();
-            } else {
-                Mono::delay(20u64.millis()).await;
-            }
+            Mono::delay(20u64.millis()).await;
         }
     }
 
-    #[task(priority=1, local=[uart_tx, can_to_serial_recv], shared=[key_active])]
+    #[task(priority=1, local=[can_to_serial_recv], shared=[usb_isr_info])]
     async fn serial_tx_handler(mut cx: serial_tx_handler::Context) {
+        defmt::info!("Serial TX task started");
         let serial_tx_handler::LocalResources {
-            uart_tx,
             can_to_serial_recv,
             ..
         } = cx.local;
@@ -444,45 +409,51 @@ mod app {
         // Never changes so we can just place it here
         loop {
             if let Ok(frame) = can_to_serial_recv.recv().await {
-                if cx.shared.key_active.lock(|r| *r) {
+                if KEY_IN_EZS.load(Ordering::Relaxed) {
                     // Only send to UART if PC is alive
                     frame.to_bytes(&mut buf);
-                    let _ = uart_tx.write(&buf).await;
+                    let res = cx.shared.usb_isr_info.lock(|usb| {
+                        usb.serial.write(&buf)
+                    });
+                    
                 }
             }
         }
     }
 
-    #[task(priority=1, local=[onboard_led, tx_canb_sender, tx_canc_sender, uart_rx], shared=[key_active])]
+    #[task(priority=1, local=[onboard_led, tx_cane, serial_to_can_recv], shared=[canb_tx, canc_tx])]
     async fn serial_rx_handler(mut cx: serial_rx_handler::Context) {
         let serial_rx_handler::LocalResources {
             onboard_led,
-            mut uart_rx,
-            tx_canb_sender,
-            tx_canc_sender,
+            serial_to_can_recv,
             ..
         } = cx.local;
-        defmt::info!("UART Rx started");
+        defmt::info!("Serial RX task started");
         loop {
             let _ = onboard_led.set_high();
-            match uart_read_frame(&mut uart_rx).await {
-                Some(frame) => {
+            match serial_to_can_recv.recv().await {
+                Ok(frame) => {
                     let _ = onboard_led.set_low();
-                    let allowed_to_send = cx.shared.key_active.lock(|r| *r);
+                    PC_AWAKE.store(true, Ordering::Relaxed);
                     match frame.net {
                         1 => {
                             // B
-                            if allowed_to_send {
-                                let _ = tx_canb_sender.try_send(frame);
+                            if KEY_IN_EZS.load(Ordering::Relaxed) {
+                                let _ = cx.shared.canb_tx.lock(|canb| {
+                                    canb.transmit_queued(Message::new(frame.to_can_msg()).unwrap())
+                                });
                             }
                         }
                         2 => {
                             // C
-                            if allowed_to_send {
-                                let _ = tx_canc_sender.try_send(frame);
+                            if KEY_IN_EZS.load(Ordering::Relaxed) {
+                                let _ = cx.shared.canc_tx.lock(|canc| {
+                                    canc.transmit_queued(Message::new(frame.to_can_msg()).unwrap())
+                                });
                             }
                         }
                         3 => { // E (Internal to command controller)
+                            let _ = cx.local.tx_cane.try_send(frame);
                         }
                         _ => {
                             defmt::error!("Invalid CAN Net byte {}", frame.net)
@@ -490,38 +461,8 @@ mod app {
                     }
                     let _ = onboard_led.set_high();
                 }
-                None => {
+                _ => {
                     // TODO - Handle error here
-                }
-            }
-        }
-    }
-
-    // Task to write out to CAN B
-    #[task(priority=1, local=[tx_canb_recv, canb_tx])]
-    async fn can_b_tx(cx: can_b_tx::Context) {
-        loop {
-            if let Ok(f) = cx.local.tx_canb_recv.recv().await {
-                if let Some(builder) = f.to_can_msg() {
-                    let _ = cx
-                        .local
-                        .canb_tx
-                        .transmit_queued(Message::new(builder).unwrap());
-                }
-            }
-        }
-    }
-
-    // Task to write out to CAN C
-    #[task(priority=1, local=[tx_canc_recv, canc_tx])]
-    async fn can_c_tx(cx: can_c_tx::Context) {
-        loop {
-            if let Ok(f) = cx.local.tx_canc_recv.recv().await {
-                if let Some(builder) = f.to_can_msg() {
-                    let _ = cx
-                        .local
-                        .canc_tx
-                        .transmit_queued(Message::new(builder).unwrap());
                 }
             }
         }
@@ -595,4 +536,44 @@ mod app {
             }
         }
     }
+
+    #[task(priority = 3, binds=USB_TRCPT0, shared=[usb_isr_info])]
+    #[unsafe(link_section = ".data.usb_trcpt0")]
+    fn usb_trcpt0(mut cx: usb_trcpt0::Context) {
+        //cx.shared.usb_polls.lock(|x| *x += 1);
+        cx.shared.usb_isr_info.lock(|lck| poll_usb(lck))
+    }
+
+    #[task(priority = 3, binds=USB_TRCPT1, shared=[usb_isr_info])]
+    #[unsafe(link_section = ".data.usb_trcpt1")]
+    fn usb_trcpt1(mut cx: usb_trcpt1::Context) {
+        //cx.shared.usb_polls.lock(|x| *x += 1);
+        cx.shared.usb_isr_info.lock(|lck| poll_usb(lck));
+    }
+
+    #[task(priority = 3, binds=USB_OTHER, shared=[usb_isr_info])]
+    #[unsafe(link_section = ".data.usb_other")]
+    fn usb_other(mut cx: usb_other::Context) {
+        //cx.shared.usb_polls.lock(|x| *x += 1);
+        cx.shared.usb_isr_info.lock(|lck| poll_usb(lck))
+    }
+
+    #[inline]
+    #[unsafe(link_section = ".data.poll_usb")]
+    fn poll_usb(info: &mut UsbIsrInfo) {
+
+        if info.dev.state() != info.last_state {
+            info.last_state = info.dev.state();
+            info.buf = [0; SERIAL_FRAME_LEN];
+        }
+
+        if info.dev.poll(&mut [&mut info.serial]) {
+            if let Some(frame) = uart_read_frame(&mut info.serial, &mut info.buf) {
+                let _ = info.sender_can_frames.try_send(frame);
+            }
+        }
+    }
 }
+
+pub static PC_AWAKE: AtomicBool = AtomicBool::new(false);
+pub static KEY_IN_EZS: AtomicBool = AtomicBool::new(false);

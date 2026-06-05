@@ -5,20 +5,19 @@ edition = "2021"
 
 [dependencies]
 cortex-m = {version="0.7", features = ["critical-section-single-core"]}
-atsamd-hal = {git="https://github.com/rnd-ash/atsamd", branch="adc_v2", features=["same51j-rt", "rtic", "can", "dma", "async", "defmt"]}
-panic-rtt-target = { version = "0.2.0" }
+atsamd-hal = {version = "0.23.3", features=["same51j-rt", "rtic", "can", "dma", "async", "defmt", "usb"]}
 embedded-hal = "1.0"
 embedded-hal-nb = "1.0"
-mcan = "0.7.0"
-rtic = {version = "2.1.2", features=["thumbv7-backend"]}
-rtic-monotonics = {version = "2.0.3", features = ["cortex-m-systick"]}
+mcan = {git="https://github.com/GrepitAB/mcan", rev="3cbdeed96bd28d2db816e6c8e7a21e6274a342a9"}
+rtic = {version = "2.2.0", features=["thumbv7-backend"]}
 rtic-sync = {version="1.3.2"}
 fugit = "0.3.7"
 mcan-core = "0.2.2"
 w211_can={path="../pc_sw/w211_can"}
-defmt = "1.0.1"
-defmt-rtt = "1.0.0"
-futures = {version="0.3.31", default-features = false}
+defmt = "1.1.0"
+defmt-rtt = "1.2.0"
+futures = {version="0.3.32", default-features = false}
+usbd-serial = "0.2.2"
 
 # For cargo flash
 [package.metadata]
@@ -32,5 +31,5 @@ lto = true
 [profile.release]
 debug = true
 lto = true
-opt-level = "s"
+opt-level = 3
 codegen-units = 1

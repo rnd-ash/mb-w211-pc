@@ -3,8 +3,8 @@ use core::cmp::min;
 use atsamd_hal::{
     can::Dependencies,
     clock::v2::types::{Can0, Can1},
-    dmac,
-    sercom::uart::{self, UartFutureRxDuplexDma},
+
+usb::UsbBus,
 };
 use mcan::{
     embedded_can::StandardId,
@@ -13,10 +13,10 @@ use mcan::{
         rx,
         tx::{self, MessageBuilder},
     },
-    rx_fifo::{Fifo0, Fifo1, RxFifo},
+    rx_fifo::{Fifo0, RxFifo},
 };
 
-use crate::bsp::{self, UartPads};
+use crate::bsp::{self};
 
 pub struct Capacities;
 
@@ -37,19 +37,19 @@ impl mcan::messageram::Capacities for Capacities {
 
 pub type Can0RxFifo0 =
     RxFifo<'static, Fifo0, Can0, <Capacities as mcan::messageram::Capacities>::RxFifo0Message>;
-pub type Can0RxFifo1 =
-    RxFifo<'static, Fifo1, Can0, <Capacities as mcan::messageram::Capacities>::RxFifo1Message>;
+//pub type Can0RxFifo1 =
+//    RxFifo<'static, Fifo1, Can0, <Capacities as mcan::messageram::Capacities>::RxFifo1Message>;
 
 pub type Can1RxFifo0 =
     RxFifo<'static, Fifo0, Can1, <Capacities as mcan::messageram::Capacities>::RxFifo0Message>;
-pub type Can1RxFifo1 =
-    RxFifo<'static, Fifo1, Can1, <Capacities as mcan::messageram::Capacities>::RxFifo1Message>;
+//pub type Can1RxFifo1 =
+//    RxFifo<'static, Fifo1, Can1, <Capacities as mcan::messageram::Capacities>::RxFifo1Message>;
 
 pub type Can0Tx = mcan::tx_buffers::Tx<'static, Can0, Capacities>;
 pub type Can1Tx = mcan::tx_buffers::Tx<'static, Can1, Capacities>;
 
-pub type Can0TxEventFifo = mcan::tx_event_fifo::TxEventFifo<'static, Can0>;
-pub type Can1TxEventFifo = mcan::tx_event_fifo::TxEventFifo<'static, Can1>;
+//pub type Can0TxEventFifo = mcan::tx_event_fifo::TxEventFifo<'static, Can0>;
+//pub type Can1TxEventFifo = mcan::tx_event_fifo::TxEventFifo<'static, Can1>;
 
 pub type Can0Aux<GclkId> = mcan::bus::Aux<
     'static,
@@ -57,21 +57,13 @@ pub type Can0Aux<GclkId> = mcan::bus::Aux<
     Dependencies<Can0, GclkId, bsp::CANBRx, bsp::CANBTx, bsp::pac::Can0>,
 >;
 
-pub type Can1Aux<GclkId> = mcan::bus::Aux<
-    'static,
-    Can1,
-    Dependencies<Can1, GclkId, bsp::CANCRx, bsp::CANCTx, bsp::pac::Can1>,
->;
+//pub type Can1Aux<GclkId> = mcan::bus::Aux<
+//    'static,
+//    Can1,
+//    Dependencies<Can1, GclkId, bsp::CANCRx, bsp::CANCTx, bsp::pac::Can1>,
+//>;
 
 pub fn frame_to_int(data: &[u8], dlc: u8) -> u64 {
-    let mut ret = 0;
-    for i in 0..dlc as usize {
-        ret |= (data[i] as u64) << (8 * (7 - i));
-    }
-    ret
-}
-
-pub fn int_to_frame(data: &[u8], dlc: u8) -> u64 {
     let mut ret = 0;
     for i in 0..dlc as usize {
         ret |= (data[i] as u64) << (8 * (7 - i));
@@ -86,7 +78,7 @@ pub enum CanNet {
     E = 3,
 }
 
-const SERIAL_FRAME_LEN: usize = 16;
+pub const SERIAL_FRAME_LEN: usize = 16;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct SerialCanFrame {
@@ -128,14 +120,15 @@ impl SerialCanFrame {
         buf[15] = res;
     }
 
-    pub fn to_can_msg(&self) -> Option<mcan::message::tx::MessageBuilder> {
-        Some(MessageBuilder {
-            id: mcan::embedded_can::Id::Standard(StandardId::new(self.id)?),
+    pub fn to_can_msg(&self) -> mcan::message::tx::MessageBuilder<'_> {
+        let id = unsafe { StandardId::new_unchecked(self.id) };
+        MessageBuilder {
+            id: mcan::embedded_can::Id::Standard(id),
             frame_type: tx::FrameType::Classic(tx::ClassicFrameType::Data(
                 &self.data[..self.dlc as usize],
             )),
             store_tx_event: None,
-        })
+        }
     }
 
     pub fn from_bytes(bytes: &[u8; SERIAL_FRAME_LEN]) -> Option<Self> {
@@ -175,29 +168,29 @@ impl SerialCanFrame {
     }
 }
 
-pub async fn uart_read_frame(
-    uart: &mut UartFutureRxDuplexDma<uart::Config<UartPads>, dmac::Ch0>,
+pub fn uart_read_frame<'a>(
+    uart: &mut usbd_serial::SerialPort<'a, UsbBus>,
+    static_buffer: &mut [u8; SERIAL_FRAME_LEN]
 ) -> Option<SerialCanFrame> {
-    let mut buf = [0u8; SERIAL_FRAME_LEN];
     // First, read the first 4 bytes (our signature)
 
     // We read the first byte alone so that the UART's RX buffer is rotated on
     // successive read failures until the magic byte is located and the rest
     // of the signature passes
     loop {
-        uart.read(&mut buf[..1]).await.ok()?; // Byte 0 of sig
-        if (buf[0]) == 0xDE {
+        uart.read(&mut static_buffer[..1]).ok()?; // Byte 0 of sig
+        if (static_buffer[0]) == 0xDE {
             break; // Break when we maybe have our first magic byte located
         }
     }
-    uart.read(&mut buf[1..4]).await.ok()?; // Byte 1-4 of the sig
-    if &buf[..4] != &[0xDE, 0xAD, 0xBE, 0xEF] {
+    uart.read(&mut static_buffer[1..4]).ok()?; // Byte 1-4 of the sig
+    if &static_buffer[..4] != &[0xDE, 0xAD, 0xBE, 0xEF] {
         // Full signature we expect
         // Invalid sig!
         return None;
     }
     // Read the remaining 12 bytes
-    uart.read(&mut buf[4..]).await.ok()?;
+    uart.read(&mut static_buffer[4..]).ok()?;
     // Process and check CRC here, none is returned if CRC failed (Check defmt logs)
-    SerialCanFrame::from_bytes(&buf)
+    SerialCanFrame::from_bytes(&static_buffer)
 }

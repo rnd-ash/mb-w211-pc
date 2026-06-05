@@ -1,7 +1,7 @@
 pub use atsamd_hal as hal;
-use atsamd_hal::clock::v2::gclk::{Gclk0Id, Gclk2Id};
+use atsamd_hal::clock::v2::gclk::Gclk2Id;
 use atsamd_hal::clock::v2::pclk::Pclk;
-use atsamd_hal::sercom::{IoSet1, Sercom1};
+use atsamd_hal::sercom::Sercom1;
 pub use hal::pac;
 
 use hal::sercom::uart::{self, BaudMode, Oversampling};
@@ -103,10 +103,24 @@ hal::bsp_pins!(
             PushPullOutput: AmpStandby
         }
     }
+
+    // USB
+    PA24 {
+        name: usb_dm
+        aliases: {
+            AlternateH: UsbDm
+        }
+    }
+    PA25 {
+        name: usb_dp
+        aliases: {
+            AlternateH: UsbDp
+        }
+    }
 );
 
 /// UART pads for the labelled RX & TX pins
-pub type UartPads = uart::Pads<UartSercom, IoSet1, UartRx, UartTx>;
+pub type UartPads = uart::Pads<UartSercom, UartRx, UartTx>;
 
 /// UART device for the labelled RX & TX pins
 pub type Uart = uart::Uart<uart::Config<UartPads>, uart::Duplex>;

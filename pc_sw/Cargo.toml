@@ -1,0 +1,9 @@
+[workspace]
+members=[
+    "daughter_pcb_comm",
+    "lcp_emu",
+    "socketcan_mcu_driver",
+    "w211_can"
+]
+
+exclude = ["socketcan_ic_tester"]

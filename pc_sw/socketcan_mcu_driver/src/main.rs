@@ -5,7 +5,7 @@ use tokio::{io::{AsyncReadExt, AsyncWriteExt, ReadHalf}, sync::mpsc::{UnboundedR
 use tokio_serial::{SerialPort, SerialPortBuilderExt, SerialPortInfo, SerialPortType, SerialStream};
 use tokio_socketcan::{CANFrame, CANSocket};
 use w211_can::{canbus::CanBus};
-use futures_util::{io::ReadExact, stream::StreamExt, TryFutureExt};
+use futures_util::{stream::StreamExt};
 
 #[derive(Debug, Clone, Parser)]
 pub struct AppSettings {
@@ -73,19 +73,12 @@ async fn main() {
     let settings = AppSettings::parse();
     println!("Waiting for port to be available");
     let port_name: String;
-    let s =format!("/sys/bus/usb/devices/{}/", settings.binf);
     'search: loop {
-        let p = Path::new(&s);
-        println!("{} {}", p.exists(), p.is_dir());
-        if p.exists() && p.is_dir() {
-            if let Ok(children) = std::fs::read_dir(p) {
-                for c in children {
-                    if let Ok(c) = c {
-                        if c.file_name().to_str().unwrap().contains("tty") {
-                            port_name = format!("/dev/{}", c.file_name().to_str().unwrap());
-                            break 'search;
-                        }
-                    }
+        for port in tokio_serial::available_ports().unwrap_or_default() {
+            if let SerialPortType::UsbPort(info) = port.port_type {
+                if info.vid == 0x16c0 && info.pid == 0x0001 {
+                    port_name = port.port_name;
+                    break 'search;
                 }
             }
         }
